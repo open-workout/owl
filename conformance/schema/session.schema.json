@@ -110,6 +110,7 @@
         "name": { "type": "string" },
         "catalog": { "type": "string" },
         "sets": { "type": "array", "items": { "$ref": "#/$defs/setRef" } },
+        "groups": { "type": "array", "items": { "$ref": "#/$defs/namedGroup" } },
         "body": { "$ref": "#/$defs/group" }
       }
     },

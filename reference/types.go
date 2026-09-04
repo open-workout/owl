@@ -184,8 +184,11 @@ type Group struct {
 type ExerciseDecl struct {
 	Name    string   `json:"name"`    // local alias, e.g. "back_squat" — distinct from Catalog
 	Catalog string   `json:"catalog"` // e.g. "BarbellBackSquat"
-	Sets    []SetRef `json:"sets"`
-	Body    Group    `json:"body"` // this declaration's own straight-set Group
+	Sets    []SetRef `json:"sets"`    // flat, top-level sets only — not ones nested in Groups
+	// Groups holds named `dropset` declarations (spec/semantics/groups.md
+	// §3.8), mirroring Day.Groups for `partA`-style assignments.
+	Groups []NamedGroup `json:"groups,omitempty"`
+	Body   Group        `json:"body"` // this declaration's own straight-set Group
 }
 
 // NamedGroup is a `partA = <groupExpr>` assignment.

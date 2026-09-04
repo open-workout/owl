@@ -1,0 +1,163 @@
+{
+  "owlVersion": "0.1.0",
+  "units": "kg",
+  "plates": [25, 20, 15, 10, 5, 2.5, 1.25],
+  "state": [
+    {
+      "path": "tm.leg_ext.weight",
+      "expr": {
+        "type": "mul",
+        "left": { "type": "number", "value": 0.85 },
+        "right": { "type": "catalogField", "catalog": "LegExtension", "field": "e1rm" }
+      },
+      "fallback": { "kind": "numeric", "value": 20 }
+    }
+  ],
+  "blocks": [
+    {
+      "name": "main",
+      "days": [
+        {
+          "name": "day1",
+          "exercises": [
+            {
+              "name": "legext",
+              "catalog": "LegExtension",
+              "sets": [],
+              "groups": [
+                {
+                  "name": "ds",
+                  "group": {
+                    "type": "group",
+                    "kind": "dropset",
+                    "interleave": "sequential",
+                    "rest": { "mode": "single" },
+                    "termination": { "mode": "count", "n": 3 },
+                    "atomic": true,
+                    "members": [
+                      {
+                        "type": "setRef",
+                        "label": "top",
+                        "exercise": "LegExtension",
+                        "target": { "kind": "reps", "expr": { "type": "number", "value": 12 } },
+                        "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.leg_ext.weight" }, "unit": "kg" },
+                        "progression": { "scheme": "double", "target": "top", "args": [8, 15, 5] }
+                      },
+                      {
+                        "type": "setRef",
+                        "exercise": "LegExtension",
+                        "target": { "kind": "reps", "expr": { "type": "number", "value": 1 }, "plus": true },
+                        "load": {
+                          "kind": "weight",
+                          "expr": {
+                            "type": "mul",
+                            "left": { "type": "number", "value": 0.8 },
+                            "right": { "type": "path", "path": "tm.leg_ext.weight" }
+                          },
+                          "unit": "kg"
+                        }
+                      },
+                      {
+                        "type": "setRef",
+                        "exercise": "LegExtension",
+                        "target": { "kind": "reps", "expr": { "type": "number", "value": 1 }, "plus": true },
+                        "load": {
+                          "kind": "weight",
+                          "expr": {
+                            "type": "mul",
+                            "left": { "type": "number", "value": 0.6 },
+                            "right": { "type": "path", "path": "tm.leg_ext.weight" }
+                          },
+                          "unit": "kg"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ],
+              "body": {
+                "type": "group",
+                "kind": "straight",
+                "interleave": "sequential",
+                "rest": { "mode": "single" },
+                "termination": { "mode": "count", "n": 1 },
+                "atomic": false,
+                "members": [
+                  {
+                    "type": "group",
+                    "kind": "dropset",
+                    "interleave": "sequential",
+                    "rest": { "mode": "single" },
+                    "termination": { "mode": "count", "n": 3 },
+                    "atomic": true,
+                    "members": [
+                      {
+                        "type": "setRef",
+                        "label": "top",
+                        "exercise": "LegExtension",
+                        "target": { "kind": "reps", "expr": { "type": "number", "value": 12 } },
+                        "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.leg_ext.weight" }, "unit": "kg" },
+                        "progression": { "scheme": "double", "target": "top", "args": [8, 15, 5] }
+                      },
+                      {
+                        "type": "setRef",
+                        "exercise": "LegExtension",
+                        "target": { "kind": "reps", "expr": { "type": "number", "value": 1 }, "plus": true },
+                        "load": {
+                          "kind": "weight",
+                          "expr": {
+                            "type": "mul",
+                            "left": { "type": "number", "value": 0.8 },
+                            "right": { "type": "path", "path": "tm.leg_ext.weight" }
+                          },
+                          "unit": "kg"
+                        }
+                      },
+                      {
+                        "type": "setRef",
+                        "exercise": "LegExtension",
+                        "target": { "kind": "reps", "expr": { "type": "number", "value": 1 }, "plus": true },
+                        "load": {
+                          "kind": "weight",
+                          "expr": {
+                            "type": "mul",
+                            "left": { "type": "number", "value": 0.6 },
+                            "right": { "type": "path", "path": "tm.leg_ext.weight" }
+                          },
+                          "unit": "kg"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "groups": [],
+          "body": {
+            "type": "group",
+            "kind": "straight",
+            "interleave": "sequential",
+            "rest": { "mode": "single" },
+            "termination": { "mode": "count", "n": 1 },
+            "atomic": false,
+            "members": [
+              { "type": "ref", "name": "legext" }
+            ]
+          }
+        }
+      ],
+      "body": {
+        "type": "group",
+        "kind": "straight",
+        "interleave": "sequential",
+        "rest": { "mode": "single" },
+        "termination": { "mode": "count", "n": 1 },
+        "atomic": false,
+        "members": [
+          { "type": "ref", "name": "day1" }
+        ]
+      }
+    }
+  ]
+}

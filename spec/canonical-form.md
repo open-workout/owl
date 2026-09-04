@@ -21,7 +21,9 @@ Program {
 Block { name, days: Day[], body: Group }       // body sequences the days
 Day   { name, exercises: ExerciseDecl[], groups: NamedGroup[], body: Group }
 
-ExerciseDecl { name, catalog, sets: SetRef[], body: Group }  // one `exercise` decl
+ExerciseDecl { name, catalog, sets: SetRef[], groups: NamedGroup[], body: Group }
+                                                // one `exercise` decl; `groups` holds
+                                                // named `dropset` declarations (semantics/groups.md §3.8)
 NamedGroup   { name, group: Group }            // one `partA = <groupExpr>` assignment
 
 Group { kind, members: Member[], interleave, rest, termination, atomic }
@@ -42,6 +44,12 @@ else). In that case the compiler synthesizes `body = Group{ interleave:
 sequential, termination: count(n), members: [Ref(d) for each declared day
 in source order] }` — a Block/Day's `body` is never itself optional, only
 the source's explicit statement list is.
+
+`ExerciseDecl.body` is synthesized the same way, in declaration order —
+except its members are the `sets`/`groups` themselves, embedded directly,
+never a `Ref` (there's no bare-statement syntax to invoke a single `set`
+or named `dropset` from outside its exercise, unlike a day/block name, so
+nothing needs to be independently addressable there).
 
 ## Two passes, two documents apart
 
