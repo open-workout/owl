@@ -6,6 +6,7 @@
   "type": "array",
   "items": {
     "type": "object",
+    "additionalProperties": false,
     "required": ["exercise", "label", "performedTarget"],
     "properties": {
       "exercise": { "type": "string", "description": "Catalog name, matching the SetRef's `exercise`." },

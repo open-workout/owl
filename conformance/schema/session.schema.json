@@ -9,6 +9,7 @@
 
     "duration": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["value", "unit"],
       "properties": {
         "value": { "type": "number" },
@@ -18,24 +19,25 @@
 
     "target": {
       "oneOf": [
-        { "type": "object", "required": ["kind", "value"], "properties": {
+        { "type": "object", "additionalProperties": false, "required": ["kind", "value"], "properties": {
           "kind": { "const": "reps" }, "value": { "type": "number" }, "plus": { "type": "boolean", "default": false } } },
-        { "type": "object", "required": ["kind", "value", "unit"], "properties": {
+        { "type": "object", "additionalProperties": false, "required": ["kind", "value", "unit"], "properties": {
           "kind": { "const": "distance" }, "value": { "type": "number" }, "unit": { "type": "string", "enum": ["m", "km"] } } },
-        { "type": "object", "required": ["kind", "value", "unit"], "properties": {
+        { "type": "object", "additionalProperties": false, "required": ["kind", "value", "unit"], "properties": {
           "kind": { "const": "duration" }, "value": { "type": "number" }, "unit": { "type": "string", "enum": ["s", "m", "h"] } } }
       ]
     },
 
     "load": {
       "oneOf": [
-        { "type": "object", "required": ["kind", "value", "unit"], "properties": {
+        { "type": "object", "additionalProperties": false, "required": ["kind", "value", "unit"], "properties": {
           "kind": { "const": "weight" }, "value": { "type": "number" }, "unit": { "type": "string", "enum": ["kg", "lb"] } } }
       ]
     },
 
     "progressionRule": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["scheme", "target"],
       "properties": {
         "scheme": { "type": "string" },
@@ -46,6 +48,7 @@
 
     "setRef": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["type", "exercise", "target"],
       "properties": {
         "type": { "const": "setRef" },
@@ -66,26 +69,27 @@
 
     "restPolicy": {
       "oneOf": [
-        { "type": "object", "required": ["mode"], "properties": { "mode": { "const": "single" }, "duration": { "$ref": "#/$defs/duration" } } },
-        { "type": "object", "required": ["mode", "intra", "inter"], "properties": {
+        { "type": "object", "additionalProperties": false, "required": ["mode"], "properties": { "mode": { "const": "single" }, "duration": { "$ref": "#/$defs/duration" } } },
+        { "type": "object", "additionalProperties": false, "required": ["mode", "intra", "inter"], "properties": {
           "mode": { "const": "two_level" }, "intra": { "$ref": "#/$defs/duration" }, "inter": { "$ref": "#/$defs/duration" } } },
-        { "type": "object", "required": ["mode"], "properties": { "mode": { "const": "ad_lib" } } },
-        { "type": "object", "required": ["mode"], "properties": { "mode": { "const": "remainder" } } }
+        { "type": "object", "additionalProperties": false, "required": ["mode"], "properties": { "mode": { "const": "ad_lib" } } },
+        { "type": "object", "additionalProperties": false, "required": ["mode"], "properties": { "mode": { "const": "remainder" } } }
       ]
     },
 
     "termination": {
       "oneOf": [
-        { "type": "object", "required": ["mode", "n"], "properties": { "mode": { "const": "count" }, "n": { "type": "integer" } } },
-        { "type": "object", "required": ["mode", "interval", "n"], "properties": {
+        { "type": "object", "additionalProperties": false, "required": ["mode", "n"], "properties": { "mode": { "const": "count" }, "n": { "type": "integer" } } },
+        { "type": "object", "additionalProperties": false, "required": ["mode", "interval", "n"], "properties": {
           "mode": { "const": "emom" }, "interval": { "$ref": "#/$defs/duration" }, "n": { "type": "integer" } } },
-        { "type": "object", "required": ["mode", "cap"], "properties": { "mode": { "const": "time_cap" }, "cap": { "$ref": "#/$defs/duration" } } },
-        { "type": "object", "required": ["mode"], "properties": { "mode": { "const": "for_time" } } }
+        { "type": "object", "additionalProperties": false, "required": ["mode", "cap"], "properties": { "mode": { "const": "time_cap" }, "cap": { "$ref": "#/$defs/duration" } } },
+        { "type": "object", "additionalProperties": false, "required": ["mode"], "properties": { "mode": { "const": "for_time" } } }
       ]
     },
 
     "group": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["type", "kind", "members", "interleave", "rest", "termination", "atomic"],
       "properties": {
         "type": { "const": "group" },
@@ -100,6 +104,7 @@
 
     "exerciseDecl": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["name", "catalog", "sets", "body"],
       "properties": {
         "name": { "type": "string" },
@@ -111,6 +116,7 @@
 
     "namedGroup": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["name", "group"],
       "properties": {
         "name": { "type": "string" },
@@ -120,6 +126,7 @@
 
     "session": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["name", "body"],
       "properties": {
         "name": { "type": "string" },

@@ -16,6 +16,13 @@ func main() {
 	}
 	cmd, path := os.Args[1], os.Args[2]
 
+	if cmd == "validate-fixtures" {
+		if err := validateFixtures(path); err != nil {
+			fatal(err)
+		}
+		return
+	}
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		fatal(err)
@@ -61,6 +68,7 @@ func fatal(err error) {
 
 func usage() {
 	fmt.Fprintln(os.Stderr, "usage:")
-	fmt.Fprintln(os.Stderr, "  owlc parse <source.owl>       parse OWL source to canonical form (not implemented yet)")
-	fmt.Fprintln(os.Stderr, "  owlc validate <canonical.json> round-trip a canonical-form JSON document through the Go types")
+	fmt.Fprintln(os.Stderr, "  owlc parse <source.owl>              parse OWL source to canonical form (not implemented yet)")
+	fmt.Fprintln(os.Stderr, "  owlc validate <canonical.json>       round-trip a canonical-form JSON document through the Go types")
+	fmt.Fprintln(os.Stderr, "  owlc validate-fixtures <repo-root>   validate every conformance/{parse,resolve,progress}/ fixture against its JSON Schema")
 }

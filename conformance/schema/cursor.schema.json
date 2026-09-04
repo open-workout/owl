@@ -4,6 +4,7 @@
   "title": "Conformance fixture: resolve() position cursor",
   "description": "Which occurrence of the program resolve() should produce a Session for — see spec/semantics/resolution.md § Inputs.",
   "type": "object",
+  "additionalProperties": false,
   "required": ["block", "day"],
   "properties": {
     "block": { "type": "string" },

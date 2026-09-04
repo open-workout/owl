@@ -51,5 +51,14 @@ enough not to need one, and it keeps the toolchain to just Go. That's why
 ## Status
 
 `go.mod` and the Go struct types mirroring `canonical-form.schema.json`
-exist (see `owl.go`) — nothing parses yet. The lexer/parser/compiler is
-the next real chunk of work.
+exist (`types.go`, with the JSON codec for its sum-typed fields in
+`codec.go`) — nothing parses OWL source yet. `owl.go`'s `Compile`,
+`Resolve`, `Progress` are stubs; `ParseCanonicalJSON` (decode
+already-compiled JSON into these types) works.
+
+`cmd/owlc` has two real subcommands today: `validate` (round-trip a
+canonical-form JSON file through the Go types) and `validate-fixtures`
+(walk `../conformance/{parse,resolve,progress}/` and check every fixture
+against its JSON Schema — this is the whole repo's schema-validation
+tooling now; there's no separate Node/npm step). The lexer/parser/
+compiler is the next real chunk of work.

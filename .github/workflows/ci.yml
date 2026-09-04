@@ -6,19 +6,8 @@ on:
   pull_request:
 
 jobs:
-  validate-corpus:
-    name: Validate spec schemas + conformance fixtures
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm ci
-      - run: npm run validate
-
   reference-go:
-    name: Build reference/ (Go)
+    name: Build reference/ + validate conformance fixtures
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -31,9 +20,11 @@ jobs:
       - run: gofmt -l . | tee /tmp/fmt.out && test ! -s /tmp/fmt.out
       - run: go vet ./...
       - run: go build ./...
-      # TODO: once Compile/Resolve/Progress are implemented, replace this
-      # with a job that actually runs them against every
-      # conformance/{parse,resolve,progress}/ fixture and diffs the
-      # result against expected.json — today's `npm run validate` job
-      # only checks the fixtures are structurally well-formed, not that
-      # they're the correct output of a real implementation.
+      - run: go run ./cmd/owlc validate-fixtures ..
+      # TODO: once Compile/Resolve/Progress are implemented, replace the
+      # validate-fixtures step above with a job that actually runs them
+      # against every conformance/{parse,resolve,progress}/ fixture and
+      # diffs the result against expected.json — validate-fixtures only
+      # checks the fixtures are structurally well-formed against the
+      # schemas in spec/ and conformance/schema/, not that they're the
+      # correct output of a real implementation.

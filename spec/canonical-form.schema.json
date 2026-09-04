@@ -4,6 +4,7 @@
   "title": "OWL canonical form",
   "description": "The structural compilation target for an OWL program, as consumed by the OpenWorkout app runtime and the conformance corpus. See canonical-form.md for a prose walkthrough, semantics/groups.md for the desugaring rules that produce the `group` shape, and semantics/targets-loads.md for `target`/`load`. This form is athlete-agnostic: catalogField references and fallbacks are resolved by the separate resolve() pass (semantics/resolution.md), not baked in here.",
   "type": "object",
+  "additionalProperties": false,
   "required": ["owlVersion", "units", "state", "blocks"],
   "properties": {
     "owlVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$", "description": "Spec version this document was compiled against. See versioning.md." },
@@ -29,6 +30,7 @@
 
     "duration": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["value", "unit"],
       "properties": {
         "value": { "type": "number" },
@@ -39,15 +41,15 @@
     "expr": {
       "description": "A recursive arithmetic expression node.",
       "oneOf": [
-        { "type": "object", "required": ["type", "value"], "properties": {
+        { "type": "object", "additionalProperties": false, "required": ["type", "value"], "properties": {
           "type": { "const": "number" }, "value": { "type": "number" } } },
-        { "type": "object", "required": ["type", "path"], "properties": {
+        { "type": "object", "additionalProperties": false, "required": ["type", "path"], "properties": {
           "type": { "const": "path" }, "path": { "$ref": "#/$defs/dottedPath" } } },
-        { "type": "object", "required": ["type", "catalog", "field"], "properties": {
+        { "type": "object", "additionalProperties": false, "required": ["type", "catalog", "field"], "properties": {
           "type": { "const": "catalogField" },
           "catalog": { "type": "string" },
           "field": { "type": "string" } } },
-        { "type": "object", "required": ["type", "left", "right"], "properties": {
+        { "type": "object", "additionalProperties": false, "required": ["type", "left", "right"], "properties": {
           "type": { "const": "mul" },
           "left": { "$ref": "#/$defs/expr" },
           "right": { "$ref": "#/$defs/expr" } } }
@@ -57,11 +59,11 @@
     "fallback": {
       "description": "Surface `| fallback`. Either a plain default value, or a sentinel naming an onboarding prompt the app must run instead (see semantics/parameters.md § Onboarding).",
       "oneOf": [
-        { "type": "object", "required": ["kind", "value"], "properties": {
+        { "type": "object", "additionalProperties": false, "required": ["kind", "value"], "properties": {
           "kind": { "const": "numeric" },
           "value": { "type": "number" },
           "plus": { "type": "boolean", "default": false } } },
-        { "type": "object", "required": ["kind", "name"], "properties": {
+        { "type": "object", "additionalProperties": false, "required": ["kind", "name"], "properties": {
           "kind": { "const": "sentinel" },
           "name": { "type": "string", "description": "e.g. \"AMW\" (Assumed Max Weight)." } } }
       ]
@@ -70,17 +72,17 @@
     "target": {
       "description": "What the athlete is asked to do (semantics/targets-loads.md §1). Tagged by `kind`.",
       "oneOf": [
-        { "type": "object", "required": ["kind", "expr"], "properties": {
+        { "type": "object", "additionalProperties": false, "required": ["kind", "expr"], "properties": {
           "kind": { "const": "reps" },
           "expr": { "$ref": "#/$defs/expr" },
           "plus": { "type": "boolean", "default": false },
           "fallback": { "$ref": "#/$defs/fallback" } } },
-        { "type": "object", "required": ["kind", "expr", "unit"], "properties": {
+        { "type": "object", "additionalProperties": false, "required": ["kind", "expr", "unit"], "properties": {
           "kind": { "const": "distance" },
           "expr": { "$ref": "#/$defs/expr" },
           "unit": { "type": "string", "enum": ["m", "km"] },
           "fallback": { "$ref": "#/$defs/fallback" } } },
-        { "type": "object", "required": ["kind", "expr", "unit"], "properties": {
+        { "type": "object", "additionalProperties": false, "required": ["kind", "expr", "unit"], "properties": {
           "kind": { "const": "duration" },
           "expr": { "$ref": "#/$defs/expr" },
           "unit": { "type": "string", "enum": ["s", "m", "h"] },
@@ -91,7 +93,7 @@
     "load": {
       "description": "What the target is performed against (semantics/targets-loads.md §2). Only `weight` is attested; the `kind` tag leaves room for a future `percentOf`/`bodyweight` variant without a breaking change.",
       "oneOf": [
-        { "type": "object", "required": ["kind", "expr", "unit"], "properties": {
+        { "type": "object", "additionalProperties": false, "required": ["kind", "expr", "unit"], "properties": {
           "kind": { "const": "weight" },
           "expr": { "$ref": "#/$defs/expr" },
           "unit": { "type": "string", "enum": ["kg", "lb"] },
@@ -101,6 +103,7 @@
 
     "stateBinding": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["path", "expr"],
       "properties": {
         "path": { "$ref": "#/$defs/dottedPath" },
@@ -111,6 +114,7 @@
 
     "progressionRule": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["scheme", "target"],
       "properties": {
         "scheme": { "type": "string", "description": "e.g. \"double\". Extensible — not a closed enum. See stdlib/schemes.md." },
@@ -121,6 +125,7 @@
 
     "setRef": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["type", "exercise", "target"],
       "properties": {
         "type": { "const": "setRef" },
@@ -135,6 +140,7 @@
     "ref": {
       "description": "A bare-name invocation (grammar `ref ::= IDENT`) — `squat;`, `superset(bench, row)`'s `bench`/`row`, `partA;`, `SE_lower;`, `leader*5`'s `leader`. Resolved against the enclosing scope's declarations (an exercise, a named group assignment, a day, or a block) rather than duplicating that declaration's body inline.",
       "type": "object",
+      "additionalProperties": false,
       "required": ["type", "name"],
       "properties": {
         "type": { "const": "ref" },
@@ -152,30 +158,31 @@
 
     "restPolicy": {
       "oneOf": [
-        { "type": "object", "required": ["mode"], "properties": { "mode": { "const": "single" }, "duration": { "$ref": "#/$defs/duration" } } },
-        { "type": "object", "required": ["mode", "intra", "inter"], "properties": {
+        { "type": "object", "additionalProperties": false, "required": ["mode"], "properties": { "mode": { "const": "single" }, "duration": { "$ref": "#/$defs/duration" } } },
+        { "type": "object", "additionalProperties": false, "required": ["mode", "intra", "inter"], "properties": {
           "mode": { "const": "two_level" },
           "intra": { "$ref": "#/$defs/duration" },
           "inter": { "$ref": "#/$defs/duration" } } },
-        { "type": "object", "required": ["mode"], "properties": { "mode": { "const": "ad_lib" } } },
-        { "type": "object", "required": ["mode"], "properties": { "mode": { "const": "remainder" } } }
+        { "type": "object", "additionalProperties": false, "required": ["mode"], "properties": { "mode": { "const": "ad_lib" } } },
+        { "type": "object", "additionalProperties": false, "required": ["mode"], "properties": { "mode": { "const": "remainder" } } }
       ]
     },
 
     "termination": {
       "oneOf": [
-        { "type": "object", "required": ["mode", "n"], "properties": { "mode": { "const": "count" }, "n": { "type": "integer" } } },
-        { "type": "object", "required": ["mode", "interval", "n"], "properties": {
+        { "type": "object", "additionalProperties": false, "required": ["mode", "n"], "properties": { "mode": { "const": "count" }, "n": { "type": "integer" } } },
+        { "type": "object", "additionalProperties": false, "required": ["mode", "interval", "n"], "properties": {
           "mode": { "const": "emom" },
           "interval": { "$ref": "#/$defs/duration" },
           "n": { "type": "integer" } } },
-        { "type": "object", "required": ["mode", "cap"], "properties": { "mode": { "const": "time_cap" }, "cap": { "$ref": "#/$defs/duration" } } },
-        { "type": "object", "required": ["mode"], "properties": { "mode": { "const": "for_time" } } }
+        { "type": "object", "additionalProperties": false, "required": ["mode", "cap"], "properties": { "mode": { "const": "time_cap" }, "cap": { "$ref": "#/$defs/duration" } } },
+        { "type": "object", "additionalProperties": false, "required": ["mode"], "properties": { "mode": { "const": "for_time" } } }
       ]
     },
 
     "group": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["type", "kind", "members", "interleave", "rest", "termination", "atomic"],
       "properties": {
         "type": { "const": "group" },
@@ -191,6 +198,7 @@
     "namedGroup": {
       "description": "A `partA = <groupExpr>`-style assignment, resolved by later `Ref(\"partA\")` members in the same day's `body`.",
       "type": "object",
+      "additionalProperties": false,
       "required": ["name", "group"],
       "properties": {
         "name": { "type": "string" },
@@ -201,6 +209,7 @@
     "exerciseDecl": {
       "description": "An `exercise <name> = $Catalog { set ... }` declaration. `name` is the local alias later `Ref`s use (e.g. `back_squat;`, or as a `superset(...)` argument) — distinct from `catalog`, the exercise-library entry. `body` is this declaration's own straight-set Group (semantics/groups.md §3.1), used when `name` is invoked bare.",
       "type": "object",
+      "additionalProperties": false,
       "required": ["name", "catalog", "sets", "body"],
       "properties": {
         "name": { "type": "string" },
@@ -212,6 +221,7 @@
 
     "day": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["name", "body"],
       "properties": {
         "name": { "type": "string" },
@@ -223,6 +233,7 @@
 
     "block": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["name", "days", "body"],
       "properties": {
         "name": { "type": "string" },
