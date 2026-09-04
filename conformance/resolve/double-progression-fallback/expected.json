@@ -1,0 +1,56 @@
+{
+  "name": "day1",
+  "exercises": [
+    {
+      "name": "squat",
+      "catalog": "BarbellBackSquat",
+      "sets": [
+        {
+          "type": "setRef",
+          "label": "top_set",
+          "exercise": "BarbellBackSquat",
+          "target": { "kind": "reps", "value": 8 },
+          "load": { "kind": "weight", "value": 60, "unit": "kg" },
+          "progression": { "scheme": "double", "target": "top_set", "args": [8, 12, 5] }
+        }
+      ],
+      "body": {
+        "type": "group",
+        "kind": "straight",
+        "interleave": "sequential",
+        "rest": { "mode": "single" },
+        "termination": { "mode": "count", "n": 1 },
+        "atomic": false,
+        "members": [
+          {
+            "type": "setRef",
+            "label": "top_set",
+            "exercise": "BarbellBackSquat",
+            "target": { "kind": "reps", "value": 8 },
+            "load": { "kind": "weight", "value": 60, "unit": "kg" },
+            "progression": { "scheme": "double", "target": "top_set", "args": [8, 12, 5] }
+          }
+        ]
+      }
+    }
+  ],
+  "groups": [],
+  "body": {
+    "type": "group",
+    "kind": "straight",
+    "interleave": "sequential",
+    "rest": { "mode": "single" },
+    "termination": { "mode": "count", "n": 1 },
+    "atomic": false,
+    "members": [
+      {
+        "type": "setRef",
+        "label": "top_set",
+        "exercise": "BarbellBackSquat",
+        "target": { "kind": "reps", "value": 8 },
+        "load": { "kind": "weight", "value": 60, "unit": "kg" },
+        "progression": { "scheme": "double", "target": "top_set", "args": [8, 12, 5] }
+      }
+    ]
+  }
+}

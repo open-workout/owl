@@ -1,0 +1,6 @@
+node_modules/
+
+# Go
+/reference/owlc
+/reference/cmd/owlc/owlc
+*.test

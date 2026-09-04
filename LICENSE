@@ -1,0 +1,13 @@
+Open Workout Language (OWL) is dual-licensed under either of
+
+- Apache License, Version 2.0 (see [LICENSE-APACHE](./LICENSE-APACHE))
+- MIT license (see [LICENSE-MIT](./LICENSE-MIT))
+
+at your option. This is the convention used by most open-source language and
+compiler projects (Rust, among others): it lets code be reused under
+whichever of the two licenses is more compatible with a downstream project.
+
+Unless you explicitly state otherwise, any contribution intentionally
+submitted for inclusion in this project, as defined in the Apache-2.0
+license, shall be dual-licensed as above, without any additional terms or
+conditions.

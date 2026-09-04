@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://owl-lang.org/conformance/schema/session.schema.json",
+  "title": "Conformance fixture: resolved Session",
+  "description": "What resolve() (spec/semantics/resolution.md) produces: a Day-shaped document with every Expr replaced by a plain resolved value and every Ref inlined. Mirrors spec/canonical-form.schema.json's `day`, `target`, `load`, `member`, `group` defs but with `expr` replaced by `value` and no `ref` variant in `member`.",
+  "$ref": "#/$defs/session",
+
+  "$defs": {
+
+    "duration": {
+      "type": "object",
+      "required": ["value", "unit"],
+      "properties": {
+        "value": { "type": "number" },
+        "unit": { "type": "string", "enum": ["s", "m", "h", "d"] }
+      }
+    },
+
+    "target": {
+      "oneOf": [
+        { "type": "object", "required": ["kind", "value"], "properties": {
+          "kind": { "const": "reps" }, "value": { "type": "number" }, "plus": { "type": "boolean", "default": false } } },
+        { "type": "object", "required": ["kind", "value", "unit"], "properties": {
+          "kind": { "const": "distance" }, "value": { "type": "number" }, "unit": { "type": "string", "enum": ["m", "km"] } } },
+        { "type": "object", "required": ["kind", "value", "unit"], "properties": {
+          "kind": { "const": "duration" }, "value": { "type": "number" }, "unit": { "type": "string", "enum": ["s", "m", "h"] } } }
+      ]
+    },
+
+    "load": {
+      "oneOf": [
+        { "type": "object", "required": ["kind", "value", "unit"], "properties": {
+          "kind": { "const": "weight" }, "value": { "type": "number" }, "unit": { "type": "string", "enum": ["kg", "lb"] } } }
+      ]
+    },
+
+    "progressionRule": {
+      "type": "object",
+      "required": ["scheme", "target"],
+      "properties": {
+        "scheme": { "type": "string" },
+        "target": { "type": "string" },
+        "args": { "type": "array", "items": { "type": "number" } }
+      }
+    },
+
+    "setRef": {
+      "type": "object",
+      "required": ["type", "exercise", "target"],
+      "properties": {
+        "type": { "const": "setRef" },
+        "label": { "type": "string" },
+        "exercise": { "type": "string" },
+        "target": { "$ref": "#/$defs/target" },
+        "load": { "$ref": "#/$defs/load" },
+        "progression": { "$ref": "#/$defs/progressionRule" }
+      }
+    },
+
+    "member": {
+      "oneOf": [
+        { "$ref": "#/$defs/setRef" },
+        { "$ref": "#/$defs/group" }
+      ]
+    },
+
+    "restPolicy": {
+      "oneOf": [
+        { "type": "object", "required": ["mode"], "properties": { "mode": { "const": "single" }, "duration": { "$ref": "#/$defs/duration" } } },
+        { "type": "object", "required": ["mode", "intra", "inter"], "properties": {
+          "mode": { "const": "two_level" }, "intra": { "$ref": "#/$defs/duration" }, "inter": { "$ref": "#/$defs/duration" } } },
+        { "type": "object", "required": ["mode"], "properties": { "mode": { "const": "ad_lib" } } },
+        { "type": "object", "required": ["mode"], "properties": { "mode": { "const": "remainder" } } }
+      ]
+    },
+
+    "termination": {
+      "oneOf": [
+        { "type": "object", "required": ["mode", "n"], "properties": { "mode": { "const": "count" }, "n": { "type": "integer" } } },
+        { "type": "object", "required": ["mode", "interval", "n"], "properties": {
+          "mode": { "const": "emom" }, "interval": { "$ref": "#/$defs/duration" }, "n": { "type": "integer" } } },
+        { "type": "object", "required": ["mode", "cap"], "properties": { "mode": { "const": "time_cap" }, "cap": { "$ref": "#/$defs/duration" } } },
+        { "type": "object", "required": ["mode"], "properties": { "mode": { "const": "for_time" } } }
+      ]
+    },
+
+    "group": {
+      "type": "object",
+      "required": ["type", "kind", "members", "interleave", "rest", "termination", "atomic"],
+      "properties": {
+        "type": { "const": "group" },
+        "kind": { "type": "string", "enum": ["straight", "superset", "circuit", "dropset", "restpause", "emom", "amrap", "for_time", "rounds"] },
+        "members": { "type": "array", "items": { "$ref": "#/$defs/member" } },
+        "interleave": { "type": "string", "enum": ["sequential", "round_robin"] },
+        "rest": { "$ref": "#/$defs/restPolicy" },
+        "termination": { "$ref": "#/$defs/termination" },
+        "atomic": { "type": "boolean" }
+      }
+    },
+
+    "exerciseDecl": {
+      "type": "object",
+      "required": ["name", "catalog", "sets", "body"],
+      "properties": {
+        "name": { "type": "string" },
+        "catalog": { "type": "string" },
+        "sets": { "type": "array", "items": { "$ref": "#/$defs/setRef" } },
+        "body": { "$ref": "#/$defs/group" }
+      }
+    },
+
+    "namedGroup": {
+      "type": "object",
+      "required": ["name", "group"],
+      "properties": {
+        "name": { "type": "string" },
+        "group": { "$ref": "#/$defs/group" }
+      }
+    },
+
+    "session": {
+      "type": "object",
+      "required": ["name", "body"],
+      "properties": {
+        "name": { "type": "string" },
+        "exercises": { "type": "array", "items": { "$ref": "#/$defs/exerciseDecl" } },
+        "groups": { "type": "array", "items": { "$ref": "#/$defs/namedGroup" } },
+        "body": { "$ref": "#/$defs/group" }
+      }
+    }
+  }
+}

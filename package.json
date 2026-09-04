@@ -1,0 +1,13 @@
+{
+  "name": "owl-lang",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Tooling for the Open Workout Language spec and conformance corpus (no runtime OWL implementation lives here — see reference/).",
+  "type": "module",
+  "scripts": {
+    "validate": "node conformance/schema/validate.mjs"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1"
+  }
+}

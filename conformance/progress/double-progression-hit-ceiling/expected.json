@@ -1,0 +1,7 @@
+{
+  "bindings": [
+    { "path": "tm.squat.weight", "value": 105 },
+    { "path": "tm.squat.reps", "value": 8 }
+  ],
+  "catalogFields": []
+}

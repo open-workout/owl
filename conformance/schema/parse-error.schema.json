@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://owl-lang.org/conformance/schema/parse-error.schema.json",
+  "title": "Conformance fixture: expected parse error",
+  "description": "Paired with a parse/<case>/source.owl that must be rejected. A conforming implementation isn't required to match `message` verbatim, but must fail to produce a canonical form for this source.",
+  "type": "object",
+  "required": ["message"],
+  "properties": {
+    "message": { "type": "string" },
+    "line": { "type": "integer", "minimum": 1 },
+    "column": { "type": "integer", "minimum": 1 }
+  }
+}

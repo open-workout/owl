@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://owl-lang.org/conformance/schema/state.schema.json",
+  "title": "Conformance fixture: athlete state",
+  "description": "An athlete's current recorded values, as consumed by resolve() (spec/semantics/resolution.md) and produced by progress() (spec/semantics/progression.md). Two independent lookup tables: `bindings` for dotted `state`/`stats` paths (e.g. tm.squat.weight), `catalogFields` for per-exercise history (e.g. $BarbellBackSquat.e1rm). A path/field with no entry is unset — resolve() must fall back per spec/semantics/parameters.md.",
+  "type": "object",
+  "properties": {
+    "bindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "value"],
+        "properties": {
+          "path": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$" },
+          "value": { "type": "number" }
+        }
+      }
+    },
+    "catalogFields": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["catalog", "field", "value"],
+        "properties": {
+          "catalog": { "type": "string" },
+          "field": { "type": "string" },
+          "value": { "type": "number" }
+        }
+      }
+    }
+  }
+}

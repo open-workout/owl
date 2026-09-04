@@ -1,0 +1,158 @@
+(* ============================================================
+   Open Workout Language (OWL) — Formal Syntax Grammar
+   ============================================================
+   Notation: ISO/W3C-style EBNF.
+     ::=   is-defined-as
+     |     alternation
+     ?     zero-or-one
+     *     zero-or-more
+     +     one-or-more (only used inside token definitions)
+     ( )   grouping
+     'x'   literal terminal
+     UPPER lexical (token) rule
+
+   Source of truth: conformance/programs/*.owl. Every production
+   below is backed by at least one example in that directory; see
+   spec/semantics/ for what each production compiles to and
+   spec/semantics/groups.md for a short list of constructs that are
+   proposed but not yet attested (dropset, restpause, explicit
+   superset rest-args).
+   ============================================================ *)
+
+
+(* ---------------- Lexical grammar ---------------- *)
+
+IDENT        ::= LETTER (LETTER | DIGIT | '_')*
+LETTER       ::= 'a'..'z' | 'A'..'Z' | '_'
+DIGIT        ::= '0'..'9'
+NUMBER       ::= DIGIT+ ('.' DIGIT+)?
+STRING       ::= '"' (any char except '"')* '"'
+COMMENT      ::= '#' (any char except newline)*        (* discarded by the lexer *)
+
+(* '$' immediately followed by an identifier names an entry in the
+   exercise catalog. No whitespace is allowed between '$' and IDENT. *)
+CATALOG_NAME ::= '$' IDENT
+
+(* Whitespace (including newlines) and COMMENT are insignificant
+   between tokens. ';' is an OPTIONAL item separator throughout the
+   grammar — every production that lists items writes the trailing
+   ';' as '?' for this reason. Consecutive items may be separated by
+   ';', a newline, or both; a ';' is never required, including on
+   the last item in a list. *)
+
+
+(* ---------------- Program structure ---------------- *)
+
+program        ::= topLevelItem*
+
+topLevelItem   ::= ( stateSection
+                    | unitsDecl
+                    | platesDecl
+                    | blockDecl
+                    | stmt
+                    ) ';'?
+
+(* ---- Global declarations ---- *)
+
+(* "state" and "stats" are accepted synonyms for the same section;
+   see spec/semantics/parameters.md. *)
+stateSection   ::= ( 'state' | 'stats' ) '=' '{' stateBinding* '}'
+stateBinding   ::= dottedPath '=' expr ( '|' fallback )? ';'?
+
+(* A fallback is either an ordinary numeric default (NUMBER, optionally
+   with the AMRAP-style '+' marker) or an uppercase sentinel IDENT — e.g.
+   `AMW` (Assumed Max Weight) — naming an onboarding value the app must
+   collect from the athlete when no history exists yet. See
+   spec/semantics/parameters.md § Onboarding. *)
+fallback       ::= NUMBER '+'?
+                 | sentinel
+sentinel       ::= IDENT   (* by convention, ALL_CAPS *)
+
+unitsDecl      ::= 'units' '=' STRING
+platesDecl     ::= 'plates' '=' '[' NUMBER ( ',' NUMBER )* ']'
+
+blockDecl      ::= 'block' IDENT '=' '{' blockItem* '}'
+blockItem      ::= ( dayDecl | stmt ) ';'?
+
+dayDecl        ::= 'day' IDENT '=' '{' dayItem* '}'
+dayItem        ::= ( exerciseDecl | stmt ) ';'?
+
+
+(* ---- Exercise declarations ---- *)
+
+exerciseDecl   ::= 'exercise' IDENT '=' CATALOG_NAME '{' exerciseItem* '}'
+exerciseItem   ::= ( setDecl | progressDecl ) ';'?
+
+setDecl        ::= 'set' ( IDENT | '_' ) '=' quantity ( '@' quantity )?
+progressDecl   ::= 'progress' '=' IDENT '(' argList? ')'
+
+
+(* ---- Statements ----
+   A statement is anything that can appear in a day/block body once
+   declarations are in scope: naming a group expression, sequencing
+   a previously-declared name, inserting rest, or repeating a name. *)
+
+stmt           ::= assignStmt
+                 | repeatStmt
+                 | restStmt
+                 | groupExpr
+                 | inlineCall
+                 | ref
+
+assignStmt     ::= IDENT '=' groupExpr
+repeatStmt     ::= ref '*' NUMBER
+restStmt       ::= 'rest' '(' duration ')'
+ref            ::= IDENT
+
+
+(* ---- Group expressions ----
+   These are the constructs that compile to a Group IR node
+   (see spec/semantics/groups.md). A group body is itself a list of statements,
+   so groups nest freely (e.g. a superset inside an AMRAP). *)
+
+groupExpr      ::= supersetExpr
+                 | cadenceExpr
+                 | amrapExpr
+                 | forTimeExpr
+
+groupBody      ::= '{' ( stmt ';'? )* '}'
+
+supersetExpr   ::= ( 'superset' | 'circuit' ) '(' supersetArg ( ',' supersetArg )* ')'
+supersetArg    ::= ref | restStmt
+
+cadenceExpr    ::= ( NUMBER '*' )? 'emom' '(' duration ')' groupBody
+
+amrapExpr      ::= 'amrap' '(' duration ')' groupBody
+
+forTimeExpr    ::= 'for_time' '{' ( roundsExpr | ( stmt ';'? )* ) '}'
+roundsExpr     ::= 'rounds' '[' NUMBER ( ',' NUMBER )* ']' 'as' IDENT groupBody
+
+
+(* ---- Inline (anonymous) exercise invocation ----
+   Shorthand for a single unnamed set, used directly inside a group
+   body without a prior `exercise` declaration. *)
+
+inlineCall     ::= CATALOG_NAME '(' quantity ( '@' quantity )? ')'
+
+
+(* ---------------- Expressions & quantities ---------------- *)
+
+quantity       ::= term '+'?
+expr           ::= term
+term           ::= factor ( '*' factor )*
+factor         ::= NUMBER unit?
+                 | dottedPath
+                 | catalogFieldRef
+                 | '(' expr ')'
+
+dottedPath     ::= IDENT ( '.' IDENT )*
+catalogFieldRef::= CATALOG_NAME '.' IDENT
+
+(* 'm' is deliberately overloaded (minutes vs. meters). It is
+   resolved by grammar position, never by the lexer: 'm' inside a
+   `duration` is minutes; 'm' inside a `quantity`'s `unit` is
+   meters. The two nonterminals never appear in the same slot. *)
+unit           ::= 'kg' | 'lb' | 'm' | 'km' | 's' | 'min' | 'h' | 'd'
+duration       ::= NUMBER ( 's' | 'm' | 'h' | 'd' )
+
+argList        ::= expr ( ',' expr )*

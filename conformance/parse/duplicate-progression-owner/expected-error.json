@@ -1,0 +1,3 @@
+{
+  "message": "state path 'tm.squat.weight' has more than one progression owner: 'a' (in exercise 'squatA') and 'b' (in exercise 'squatB')"
+}
