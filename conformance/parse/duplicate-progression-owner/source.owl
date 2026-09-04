@@ -1,0 +1,20 @@
+state = {
+    tm.squat.weight = 100
+}
+units = "kg"
+plates = [25, 20, 15, 10, 5, 2.5, 1.25]
+
+block main = {
+    day day1 = {
+        exercise squatA = $BarbellBackSquat {
+            set a = 5 @ tm.squat.weight
+            progress = double(a, 3, 5, 5)
+        }
+        exercise squatB = $BarbellBackSquat {
+            set b = 5 @ tm.squat.weight
+            progress = double(b, 3, 5, 5)
+        }
+        squatA;
+        squatB;
+    }
+}

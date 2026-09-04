@@ -1,0 +1,73 @@
+# Canonical form
+
+The canonical form is OWL's interchange target: the JSON shape a `.owl`
+source file compiles to, and the shape every conformance fixture, the
+reference implementation, and the app runtime agree on. Full field-level
+detail is in [`canonical-form.schema.json`](./canonical-form.schema.json)
+(JSON Schema, draft 2020-12); this document is the prose map of it.
+
+## Shape at a glance
+
+```
+Program {
+  owlVersion: "0.1.0"
+  units:  "kg" | "lb"
+  plates: number[]
+  state:  StateBinding[]
+  blocks: Block[]
+  sequence?: Group          // top-level ordering/repetition, e.g. `leader*5;`
+}
+
+Block { name, days: Day[], body: Group }       // body sequences the days
+Day   { name, exercises: ExerciseDecl[], groups: NamedGroup[], body: Group }
+
+ExerciseDecl { name, catalog, sets: SetRef[], body: Group }  // one `exercise` decl
+NamedGroup   { name, group: Group }            // one `partA = <groupExpr>` assignment
+
+Group { kind, members: Member[], interleave, rest, termination, atomic }
+Member = SetRef | Ref | Group                  // groups nest
+Ref    { name }                                // a bare-name use: exercise, named
+                                                // group, day, or block — resolved
+                                                // against the enclosing declarations
+
+SetRef { exercise, target, load?, progression? }
+Target = Reps | Distance | Duration           // what to do
+Load   = Weight                               // what to do it against
+```
+
+A `Block`/`Day`'s `body` is always present, even when the source has no
+explicit sequencing statements after its declarations (e.g.
+`complicated-crossfit.owl`'s `block main` has a single `day` and nothing
+else). In that case the compiler synthesizes `body = Group{ interleave:
+sequential, termination: count(n), members: [Ref(d) for each declared day
+in source order] }` — a Block/Day's `body` is never itself optional, only
+the source's explicit statement list is.
+
+## Two passes, two documents apart
+
+Canonical form is produced by **structural compilation** — parsing a
+`.owl` source and expanding every macro (`rounds … as x`, `name*N`) — which
+is athlete-agnostic: the same canonical document works for every athlete
+running the program. It is *not* the final, ready-to-perform workout: any
+`target`/`load` whose `expr` is a dotted `state` path or a
+`$Catalog.field` reference is left unresolved, along with its `fallback`
+if it has one.
+
+Turning one canonical document into a concrete, numbers-filled-in workout
+for one athlete on one day is [`resolve`](./semantics/resolution.md)'s
+job — a separate, per-athlete pass. See:
+
+- [`semantics/groups.md`](./semantics/groups.md) — how source constructs
+  (`superset`, `emom`, `amrap`, `for_time`, `rounds`, …) desugar into the
+  `Group` shape above.
+- [`semantics/targets-loads.md`](./semantics/targets-loads.md) — the
+  `Target`/`Load` unions.
+- [`semantics/resolution.md`](./semantics/resolution.md) — `resolve`.
+- [`semantics/progression.md`](./semantics/progression.md) and
+  [`stdlib/schemes.md`](./stdlib/schemes.md) — how a logged session flows
+  back into updated `state`.
+
+## Versioning
+
+Every canonical document declares `owlVersion`. See
+[`versioning.md`](./versioning.md).

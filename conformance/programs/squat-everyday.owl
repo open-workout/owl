@@ -1,0 +1,84 @@
+state = {                       # per-athlete, mutated by progression
+	tm.squat.weight = 0.85 * $BarbellBackSquat.e1rm | AMW
+	tm.squat.reps = 5
+
+    tm.fsquat.weight = 0.8 * $BarbellFrontSquat.e1rm | AMW
+    tm.fsquat.reps = 5
+	
+	tm.leg_ext.weight = 0.85 * $LegExt.e1rm | AMW
+	tm.leg_ext.reps = 10
+	
+	tm.leg_curl.weight = 0.85 * $LyingLegCurl.e1rm | AMW
+	tm.leg_curl.reps = 10
+	
+	tm.calf_raise.weight = 0.85 * $SeatedCalfRaise.e1rm | AMW
+	tm.calf_raise.reps = 10
+
+    tm.bp.weight = 0.8 * $BarbellBenchPress.e1rm | AMW
+    tm.bp.reps = 6
+
+
+}
+	
+units = "kg";
+plates = [25, 20, 15, 10, 5, 2.5, 1.25]
+
+block leader = {
+	day SE_lower = {
+		exercise squat = $BarbellBackSquat {
+			set _ = 10 @ 0.8 * tm.squat.weight;
+			set top_set = tm.squat.reps+ @ tm.squat.weight;
+			progress = double(top_set,8,12,5)
+		}
+		exercise legext = $LegExtension {
+			set le0 = tm.leg_ext.reps @ tm.leg_ext.weight
+			set le1 = tm.leg_ext.reps+ @ tm.leg_ext.weight
+			progress = double(le1,8,15,5)
+		}
+		
+		exercise llegcurl = $LyingLegCurl {
+			set lc0 = tm.leg_curl.reps @ 0.7 * tm.leg_curl.weight
+			set lc1 = tm.leg_curl.reps+ @ tm.leg_curl.weight
+			progress = double(lc1,10,20,5)
+		}
+		
+		exercise calfraise = $SeatedCalfRaise {
+			set lc0 = tm.calf_raise.reps @ 0.7 * tm.calf_raise.weight
+			set lc1 = tm.calf_raise.reps+ @ tm.calf_raise.weight
+			progress = double(lc1,10,20,5)
+		}
+		
+		squat;
+		legext;
+		llegcurl;
+		calfraise;
+		
+	}
+
+    day SE_upper = {
+        exercise frontSquat = $BarbellFrontSquat {
+            set _ = 0.8 * tm.fsquat.reps @ 0.8 * tm.fsquat.weight
+            set top_set = tm.fsquat.reps @ tm.fsquat.weight
+            progress = double(top_set,4,7,5)
+        }
+
+        exercise bp = $BarbellBenchPress {
+            set _ = 0.8 * tm.bp.reps @ 0.8 * tm.bp.weight
+            set top_set = tm.bp.reps @ tm.bp.weight
+            progress = double(top_set, 5,8,5)
+        }
+
+        frontSquat;
+        bp;
+    }
+	
+	SE_lower;
+    rest(1d);
+    SE_upper;
+    rest(1d);
+	
+}
+
+leader*5;
+
+			

@@ -1,0 +1,245 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://owl-lang.org/spec/canonical-form.schema.json",
+  "title": "OWL canonical form",
+  "description": "The structural compilation target for an OWL program, as consumed by the OpenWorkout app runtime and the conformance corpus. See canonical-form.md for a prose walkthrough, semantics/groups.md for the desugaring rules that produce the `group` shape, and semantics/targets-loads.md for `target`/`load`. This form is athlete-agnostic: catalogField references and fallbacks are resolved by the separate resolve() pass (semantics/resolution.md), not baked in here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["owlVersion", "units", "state", "blocks"],
+  "properties": {
+    "owlVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$", "description": "Spec version this document was compiled against. See versioning.md." },
+    "units": { "type": "string", "enum": ["kg", "lb"] },
+    "plates": { "type": "array", "items": { "type": "number" } },
+    "state": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/stateBinding" }
+    },
+    "blocks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/block" }
+    },
+    "sequence": {
+      "description": "Top-level ordering/repetition of blocks, e.g. `leader*5;`. Compiles via the same repetition macro as `rounds` (semantics/groups.md §3.7).",
+      "$ref": "#/$defs/group"
+    }
+  },
+
+  "$defs": {
+
+    "dottedPath": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$" },
+
+    "duration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "unit"],
+      "properties": {
+        "value": { "type": "number" },
+        "unit": { "type": "string", "enum": ["s", "m", "h", "d"] }
+      }
+    },
+
+    "expr": {
+      "description": "A recursive arithmetic expression node.",
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["type", "value"], "properties": {
+          "type": { "const": "number" }, "value": { "type": "number" } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "path"], "properties": {
+          "type": { "const": "path" }, "path": { "$ref": "#/$defs/dottedPath" } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "catalog", "field"], "properties": {
+          "type": { "const": "catalogField" },
+          "catalog": { "type": "string" },
+          "field": { "type": "string" } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "left", "right"], "properties": {
+          "type": { "const": "mul" },
+          "left": { "$ref": "#/$defs/expr" },
+          "right": { "$ref": "#/$defs/expr" } } }
+      ]
+    },
+
+    "fallback": {
+      "description": "Surface `| fallback`. Either a plain default value, or a sentinel naming an onboarding prompt the app must run instead (see semantics/parameters.md § Onboarding).",
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["kind", "value"], "properties": {
+          "kind": { "const": "numeric" },
+          "value": { "type": "number" },
+          "plus": { "type": "boolean", "default": false } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "name"], "properties": {
+          "kind": { "const": "sentinel" },
+          "name": { "type": "string", "description": "e.g. \"AMW\" (Assumed Max Weight)." } } }
+      ]
+    },
+
+    "target": {
+      "description": "What the athlete is asked to do (semantics/targets-loads.md §1). Tagged by `kind`.",
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["kind", "expr"], "properties": {
+          "kind": { "const": "reps" },
+          "expr": { "$ref": "#/$defs/expr" },
+          "plus": { "type": "boolean", "default": false },
+          "fallback": { "$ref": "#/$defs/fallback" } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "expr", "unit"], "properties": {
+          "kind": { "const": "distance" },
+          "expr": { "$ref": "#/$defs/expr" },
+          "unit": { "type": "string", "enum": ["m", "km"] },
+          "fallback": { "$ref": "#/$defs/fallback" } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "expr", "unit"], "properties": {
+          "kind": { "const": "duration" },
+          "expr": { "$ref": "#/$defs/expr" },
+          "unit": { "type": "string", "enum": ["s", "m", "h"] },
+          "fallback": { "$ref": "#/$defs/fallback" } } }
+      ]
+    },
+
+    "load": {
+      "description": "What the target is performed against (semantics/targets-loads.md §2). Only `weight` is attested; the `kind` tag leaves room for a future `percentOf`/`bodyweight` variant without a breaking change.",
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["kind", "expr", "unit"], "properties": {
+          "kind": { "const": "weight" },
+          "expr": { "$ref": "#/$defs/expr" },
+          "unit": { "type": "string", "enum": ["kg", "lb"] },
+          "fallback": { "$ref": "#/$defs/fallback" } } }
+      ]
+    },
+
+    "stateBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "expr"],
+      "properties": {
+        "path": { "$ref": "#/$defs/dottedPath" },
+        "expr": { "$ref": "#/$defs/expr" },
+        "fallback": { "$ref": "#/$defs/fallback" }
+      }
+    },
+
+    "progressionRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scheme", "target"],
+      "properties": {
+        "scheme": { "type": "string", "description": "e.g. \"double\". Extensible — not a closed enum. See stdlib/schemes.md." },
+        "target": { "type": "string", "description": "Label of the `set` this rule progresses." },
+        "args": { "type": "array", "items": { "type": "number" } }
+      }
+    },
+
+    "setRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "exercise", "target"],
+      "properties": {
+        "type": { "const": "setRef" },
+        "label": { "type": "string", "description": "Omitted/absent for anonymous inline calls (surface `_` or bare `$Catalog(...)`)." },
+        "exercise": { "type": "string", "description": "Catalog name, e.g. \"BarbellBackSquat\"." },
+        "target": { "$ref": "#/$defs/target" },
+        "load": { "$ref": "#/$defs/load" },
+        "progression": { "$ref": "#/$defs/progressionRule" }
+      }
+    },
+
+    "ref": {
+      "description": "A bare-name invocation (grammar `ref ::= IDENT`) — `squat;`, `superset(bench, row)`'s `bench`/`row`, `partA;`, `SE_lower;`, `leader*5`'s `leader`. Resolved against the enclosing scope's declarations (an exercise, a named group assignment, a day, or a block) rather than duplicating that declaration's body inline.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "name"],
+      "properties": {
+        "type": { "const": "ref" },
+        "name": { "type": "string" }
+      }
+    },
+
+    "member": {
+      "oneOf": [
+        { "$ref": "#/$defs/setRef" },
+        { "$ref": "#/$defs/ref" },
+        { "$ref": "#/$defs/group" }
+      ]
+    },
+
+    "restPolicy": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["mode"], "properties": { "mode": { "const": "single" }, "duration": { "$ref": "#/$defs/duration" } } },
+        { "type": "object", "additionalProperties": false, "required": ["mode", "intra", "inter"], "properties": {
+          "mode": { "const": "two_level" },
+          "intra": { "$ref": "#/$defs/duration" },
+          "inter": { "$ref": "#/$defs/duration" } } },
+        { "type": "object", "additionalProperties": false, "required": ["mode"], "properties": { "mode": { "const": "ad_lib" } } },
+        { "type": "object", "additionalProperties": false, "required": ["mode"], "properties": { "mode": { "const": "remainder" } } }
+      ]
+    },
+
+    "termination": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["mode", "n"], "properties": { "mode": { "const": "count" }, "n": { "type": "integer" } } },
+        { "type": "object", "additionalProperties": false, "required": ["mode", "interval", "n"], "properties": {
+          "mode": { "const": "emom" },
+          "interval": { "$ref": "#/$defs/duration" },
+          "n": { "type": "integer" } } },
+        { "type": "object", "additionalProperties": false, "required": ["mode", "cap"], "properties": { "mode": { "const": "time_cap" }, "cap": { "$ref": "#/$defs/duration" } } },
+        { "type": "object", "additionalProperties": false, "required": ["mode"], "properties": { "mode": { "const": "for_time" } } }
+      ]
+    },
+
+    "group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "kind", "members", "interleave", "rest", "termination", "atomic"],
+      "properties": {
+        "type": { "const": "group" },
+        "kind": { "type": "string", "enum": ["straight", "superset", "circuit", "dropset", "restpause", "emom", "amrap", "for_time", "rounds"] },
+        "members": { "type": "array", "items": { "$ref": "#/$defs/member" } },
+        "interleave": { "type": "string", "enum": ["sequential", "round_robin"] },
+        "rest": { "$ref": "#/$defs/restPolicy" },
+        "termination": { "$ref": "#/$defs/termination" },
+        "atomic": { "type": "boolean" }
+      }
+    },
+
+    "namedGroup": {
+      "description": "A `partA = <groupExpr>`-style assignment, resolved by later `Ref(\"partA\")` members in the same day's `body`.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "group"],
+      "properties": {
+        "name": { "type": "string" },
+        "group": { "$ref": "#/$defs/group" }
+      }
+    },
+
+    "exerciseDecl": {
+      "description": "An `exercise <name> = $Catalog { set ... }` declaration. `name` is the local alias later `Ref`s use (e.g. `back_squat;`, or as a `superset(...)` argument) — distinct from `catalog`, the exercise-library entry. `body` is this declaration's own straight-set Group (semantics/groups.md §3.1), used when `name` is invoked bare.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "catalog", "sets", "body"],
+      "properties": {
+        "name": { "type": "string" },
+        "catalog": { "type": "string", "description": "e.g. \"BarbellBackSquat\" (the `$Catalog` name without the `$`)." },
+        "sets": { "type": "array", "items": { "$ref": "#/$defs/setRef" } },
+        "body": { "$ref": "#/$defs/group" }
+      }
+    },
+
+    "day": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "body"],
+      "properties": {
+        "name": { "type": "string" },
+        "exercises": { "type": "array", "items": { "$ref": "#/$defs/exerciseDecl" } },
+        "groups": { "type": "array", "items": { "$ref": "#/$defs/namedGroup" } },
+        "body": { "$ref": "#/$defs/group" }
+      }
+    },
+
+    "block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "days", "body"],
+      "properties": {
+        "name": { "type": "string" },
+        "days": { "type": "array", "items": { "$ref": "#/$defs/day" } },
+        "body": { "$ref": "#/$defs/group" }
+      }
+    }
+  }
+}

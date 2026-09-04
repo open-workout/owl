@@ -1,0 +1,41 @@
+state = {
+    tm.squat.weight = 0.9 * $BarbellBackSquat.e1rm | 60
+    tm.squat.reps   = 3
+}
+
+units = "kg"
+plates = [25, 20, 15, 10, 5, 2.5, 1.25]
+
+block main = {
+    day metcon_thursday = {
+
+        # ── Part A — Back Squat, every 3:00 * 5  (clock-cadence group) ──
+        exercise back_squat = $BarbellBackSquat {
+            set work = tm.squat.reps @ 0.8 * tm.squat.weight
+            progress = double(work, 3, 5, 5)          # parameter-based, progresses
+        }
+        partA = 5*emom(3m){ back_squat }             # 5 rounds, 3-min cadence, remainder = rest
+
+        # ── Part B — "Fran": 21-15-9 Thruster + Pull-up, for time ──
+        partB = for_time {
+            rounds [21, 15, 9] as n {
+                $BarbellThruster( n @ 42.5)         # all n thrusters…
+                $PullUp( n )                           # …then all n pull-ups  (sequential couplet)
+            }
+        } # this is inline notation
+
+        # ── Part C — AMRAP 12: triplet, as many rounds as possible ──
+        partC = amrap(12m) {
+            $KettlebellSwing( 15 @ 24kg )
+            $BoxJumpOver( 12 )
+            $ToesToBar( 9 )
+        }
+
+        partA; 
+        rest(3m);
+        partB;
+        rest(4m);
+        partC
+    }
+}
+

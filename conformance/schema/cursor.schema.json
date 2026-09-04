@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://owl-lang.org/conformance/schema/cursor.schema.json",
+  "title": "Conformance fixture: resolve() position cursor",
+  "description": "Which occurrence of the program resolve() should produce a Session for — see spec/semantics/resolution.md § Inputs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["block", "day"],
+  "properties": {
+    "block": { "type": "string" },
+    "iteration": { "type": "integer", "minimum": 1, "default": 1, "description": "1-based index into a repeated block (e.g. the 3rd pass of `leader*5;`)." },
+    "day": { "type": "string" }
+  }
+}
