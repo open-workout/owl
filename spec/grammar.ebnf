@@ -81,10 +81,23 @@ dayItem        ::= ( exerciseDecl | stmt ) ';'?
 (* ---- Exercise declarations ---- *)
 
 exerciseDecl   ::= 'exercise' IDENT '=' CATALOG_NAME '{' exerciseItem* '}'
-exerciseItem   ::= ( setDecl | progressDecl ) ';'?
+exerciseItem   ::= ( setDecl | progressDecl | dropsetDecl ) ';'?
 
-setDecl        ::= 'set' ( IDENT | '_' ) '=' quantity ( '@' quantity )?
+setDecl        ::= 'set' ( IDENT | '_' ) '=' quantity ( '@' quantity )? dropModifier?
 progressDecl   ::= 'progress' '=' IDENT '(' argList? ')'
+
+(* A named dropset groups a top set with its drop-sets as one atomic
+   unit (see spec/semantics/groups.md §3.8). Only `setDecl`s are valid
+   inside — dropsets don't nest, and don't carry their own `progress`
+   (a `progressDecl` referencing into a dropset's sets sits alongside
+   it, at the exerciseItem level — see dropsetDecl's example). *)
+dropsetDecl    ::= 'dropset' IDENT '=' '{' ( setDecl ';'? )* '}'
+
+(* Sugar: `drop(f1, f2, ...)` on a set line desugars into an anonymous
+   dropset — the annotated set plus one auto-generated `1+` (to-failure)
+   set per factor, each loaded at `factor * <this set>.weight`. Requires
+   the set it's attached to have a `@ load`. See groups.md §3.8. *)
+dropModifier   ::= 'drop' '(' NUMBER ( ',' NUMBER )* ')'
 
 
 (* ---- Statements ----
@@ -147,6 +160,18 @@ factor         ::= NUMBER unit?
 
 dottedPath     ::= IDENT ( '.' IDENT )*
 catalogFieldRef::= CATALOG_NAME '.' IDENT
+
+(* `dottedPath` is overloaded by design, resolved by the compiler's
+   scope lookup rather than by a separate grammar rule: a leading
+   segment naming a `state` binding root (e.g. `tm`) makes it a state
+   path (`tm.squat.weight`); a leading segment naming an earlier `set`
+   label in the same exercise/dropset (e.g. `top`) makes it a local
+   set-field reference (`top.weight`, only `.weight` attested — see
+   spec/semantics/targets-loads.md §4); a leading segment naming a
+   `dropset` (e.g. `ds`) qualifies a label declared inside it, valid
+   wherever a set label is expected — e.g. `progress = double(ds.top,
+   ...)`. It is a compile error for the leading segment to resolve to
+   none of these. *)
 
 (* 'm' is deliberately overloaded (minutes vs. meters). It is
    resolved by grammar position, never by the lexer: 'm' inside a

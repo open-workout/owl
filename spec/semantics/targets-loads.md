@@ -29,7 +29,10 @@ Target = Reps     { count: Expr, plus: bool }   // "10", "tm.squat.reps+"
 
 `plus` is the surface `+` marker (`tm.squat.reps+`): "this many reps *or
 more*" — an open-ended/AMRAP-style target rather than a fixed count. It is
-only meaningful on `Reps`.
+only meaningful on `Reps`. The same marker on a nominal floor (`1+`, as in
+a dropset's auto-generated sets — [`groups.md`](./groups.md) §3.8) reads
+as "to failure" — it's the same open-ended semantics, just anchored at
+the minimum instead of a working number.
 
 A `set` with only one `quantity` and no `@` (e.g. `CardioRower`'s
 `set _ = 100m`) has a `Target` and no `Load` at all — some movements are
@@ -77,3 +80,36 @@ because they mean different things downstream:
 
 See [`canonical-form.schema.json`](../canonical-form.schema.json)'s
 `setRef.target` / `setRef.load` fields for the JSON shape.
+
+## 4. Local set references
+
+A `Load`'s `expr` can reference an earlier `set` in the same exercise or
+`dropset`, not just a `state` path — this is how a dropset expresses "80%
+of my top set" without hardcoding a number:
+
+```owl
+set top = 12 @ tm.leg_ext.weight
+set _   = 1+ @ 0.8 * top.weight     # 80% of top
+```
+
+Syntactically `top.weight` is nothing new — it's the same `dottedPath`
+production as `tm.squat.weight` (`grammar.ebnf`'s `dottedPath ::= IDENT
+('.' IDENT)*`). What makes it a *local set reference* rather than a
+`state` path is purely name resolution: the compiler resolves a
+`dottedPath`'s leading segment by checking, in order, whether it names an
+earlier `set` label in scope, a `dropset` name in scope, or a `state`
+binding root — see `grammar.ebnf`'s note under `dottedPath` for the full
+rule, and [`groups.md`](./groups.md) §3.8 for how this is used inside
+`dropset`.
+
+Structurally, `X.weight` compiles by substituting a **copy of `X`'s own
+`load.expr`** wherever it appears — the same compile-time substitution
+`groups.md` §3.5 uses for `rounds ... as n`, not a new runtime-resolved
+reference. `0.8 * top.weight` where `top`'s load is `tm.squat.weight`
+compiles to the same `Expr` tree as if you'd written `0.8 *
+tm.squat.weight` directly — no new node type in
+`canonical-form.schema.json`'s `expr` def, and no dependency on `top`'s
+*actual logged* performance (OWL has no live mid-session re-resolution;
+see `resolution.md` §3). Only `.weight` is attested; a `.reps`/`.target`
+variant (substituting the referenced set's `target.expr` instead) would
+follow the same rule but isn't demonstrated anywhere yet.

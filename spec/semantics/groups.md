@@ -52,8 +52,8 @@ document produces.
 | plain sets of one exercise ("straight sets") | `sequential` | `{single}` | `count(sets)` | `false` |
 | `superset(a, b, …)` | `round_robin` | `{intra:0, inter:R}` | `count(rounds)` | `false` |
 | `circuit(a, b, …)` | `round_robin` | `{intra:0, inter:R}` | `count(rounds)` | `false` |
-| dropset *(proposed, §5)* | `sequential` | `{intra:0}` | `count(drops)` | `true` |
-| rest-pause *(proposed, §5)* | `sequential` | `{intra:15s}` | `count(bursts)` | `true` |
+| `dropset NAME = { ... }` / `drop(...)` sugar (§3.8) | `sequential` | `{single: 0s}` | `count(drops)` | `true` |
+| rest-pause *(proposed, §5)* | `sequential` | `{single: 15s}` | `count(bursts)` | `true` |
 | `N*emom(t){ … }` | `round_robin` | `{inter: remainder}` | `emom(t, N)` | `false` |
 | `amrap(t){ … }` | `round_robin` | `{ad_lib}` | `time_cap(t)` | `false` |
 | `for_time { … }` | `round_robin` | `{ad_lib}` | `for_time` | `false` |
@@ -61,8 +61,14 @@ document produces.
 `circuit` and `superset` are the same IR shape; the surface keyword is
 preserved only as a label for the athlete-facing UI, it carries no semantic
 difference. Dropset and rest-pause share the same shape too — the only
-knobs that differ are `rest.intra` (`0` vs. `15s`) and whether the loads
-descend across members (dropset) or stay fixed (rest-pause).
+knobs that differ are `rest`'s `single` duration (`0s` vs. `15s`) and
+whether the loads descend across members (dropset) or stay fixed
+(rest-pause). Both use `RestPolicy`'s `single` mode, not `two_level` — a
+sequential/atomic group has no "lap" concept for `intra` vs. `inter` to
+distinguish. `two_level` is reserved for groups where that distinction is
+real: `superset`/`circuit` above. (`emom`'s `{inter: remainder}` and
+`amrap`/`for_time`'s `{ad_lib}` are their own single-value `RestPolicy`
+modes for the same reason — see §1.)
 
 ## 3. Desugaring rules
 
@@ -203,6 +209,63 @@ atomic: false, members: [copy of `leader`'s compiled body] × 5 }`. Same
 repetition-macro treatment as `rounds`, just with a fixed body instead of a
 per-lap substitution.
 
+### 3.8 `dropset` declaration → `dropset` Group
+
+```owl
+exercise legext = $LegExtension {
+    dropset ds = {
+        set top = 12 @ tm.leg_ext.weight
+        set _   = 1+ @ 0.8 * top.weight     # to failure, 80% of top
+        set _   = 1+ @ 0.6 * top.weight     # to failure, 60% of top
+    }
+    progress = double(ds.top, 8, 15, 5)
+}
+```
+
+→ `NamedGroup{ name: "ds", group: Group{ kind: dropset, interleave:
+sequential, rest: {single: 0s}, termination: count(3), atomic: true,
+members: [SetRef(top), SetRef(_), SetRef(_)] } }`, held in the exercise
+declaration's `groups` list (`ExerciseDecl.groups`, mirroring `Day.groups`
+for `partA`-style assignments — see [`canonical-form.md`](../canonical-form.md)).
+Each `_`-labeled set's `load.expr` is produced by the local-set-reference
+substitution in [`targets-loads.md`](./targets-loads.md) §4 — `0.8 *
+top.weight` compiles to `0.8 * tm.leg_ext.weight`, a plain composed `Expr`
+with no new node type.
+
+Naming the dropset (`ds`) makes it a scope: `top` is only reachable from
+outside as `ds.top` (as `progress`'s target argument does above) — see
+`grammar.ebnf`'s note under `dottedPath`. `progress`'s rule still attaches
+directly to the `top` `SetRef` inside `ds`'s `Group.members`, exactly as
+it would for a flat `set` (§3.1) — a dropset changes where a set sits
+structurally, not how progression attaches to it.
+
+**Sugar**: `drop(f1, f2, …)` on a `set` line desugars to the same
+`dropset` `Group` shape, anonymously:
+
+```owl
+exercise legext = $LegExtension {
+    set top = 12 @ tm.leg_ext.weight drop(0.8, 0.6)   # top + two auto-drops to failure
+    progress = double(top, 8, 15, 5)
+}
+```
+
+expands to the identical `Group{ kind: dropset, ... }` as the explicit
+form, with one `SetRef{ target: {kind: reps, expr: 1, plus: true}, load:
+{expr: fᵢ * <annotated set>.load.expr} }` per factor `fᵢ`, in order —
+but the dropset is **not** named, so it gets no entry in
+`ExerciseDecl.groups` and is instead embedded directly, inline, in the
+exercise's `body` at the position `top` was declared (the same treatment
+a flat `set` already gets — see §3.1). Because there's no name to
+qualify with, `top` stays reachable directly (`progress = double(top, 8,
+15, 5)`, not `double(ds.top, ...)`) — sugar keeps the flat exercise-level
+namespace; an explicit name always introduces a nested one.
+
+`drop(...)`'s factors are always multipliers on the annotated set's own
+`load` — there's no attested syntax for drop-setting a load-less
+(distance/duration-only) set, and a compiler should reject `drop(...)` on
+one. `1+` (open-ended reps) is being used here specifically to mean "to
+failure" — see `targets-loads.md` §1's note on `plus`.
+
 ## 4. Where structural compilation ends
 
 Everything above runs once per program, independent of any athlete. The
@@ -219,13 +282,12 @@ These follow directly from the group model above, but no `.owl` file
 demonstrates surface syntax for them yet. Flagging them here rather than
 asserting them as canon:
 
-- **`dropset(a, b, c)`** / **`restpause(a, b, c)`** — proposed symmetric
-  with `supersetExpr` (`dropsetExpr`/`restpauseExpr` productions reusing
-  `supersetArg`), compiling to the rows in §2's mapping table
-  (`interleave: sequential`, `atomic: true`, differing only in
-  `rest.intra`). An alternative would be modeling these as a modifier on a
-  single `exercise { }` block's consecutive `set` lines rather than a
-  multi-member call — needs a decision before it's added to the grammar.
+- **`restpause`** — proposed as the same shape `dropset` uses (§3.8: a
+  named `restpause NAME = { ... }` declaration inside an `exercise { }`,
+  or a `rest_pause(15s)`-style sugar modifier on a `set` line), differing
+  only in `rest`'s `single` duration (`15s` instead of `0`) and that the
+  load stays fixed across bursts rather than descending. Not added to the grammar
+  yet — no attested example to confirm the sugar's exact spelling.
 - **Explicit inter-round rest for `superset`/`circuit`** — the `rest(d)`
   *between* two `ref` args sets `intra` (§3.2), but there's no attested way
   to override the `inter` (between-lap) default. A trailing `rest(d)` after

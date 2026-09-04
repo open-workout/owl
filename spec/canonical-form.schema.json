@@ -207,7 +207,7 @@
     },
 
     "exerciseDecl": {
-      "description": "An `exercise <name> = $Catalog { set ... }` declaration. `name` is the local alias later `Ref`s use (e.g. `back_squat;`, or as a `superset(...)` argument) — distinct from `catalog`, the exercise-library entry. `body` is this declaration's own straight-set Group (semantics/groups.md §3.1), used when `name` is invoked bare.",
+      "description": "An `exercise <name> = $Catalog { set ... }` declaration. `name` is the local alias later `Ref`s use (e.g. `back_squat;`, or as a `superset(...)` argument) — distinct from `catalog`, the exercise-library entry. `sets` holds only flat, top-level sets (not ones nested inside a `groups` entry); `groups` holds named `dropset` declarations (semantics/groups.md §3.8), mirroring `day.groups` for `partA`-style assignments. `body` is this declaration's own straight-set Group (semantics/groups.md §3.1), used when `name` is invoked bare — its members embed `sets`/`groups` directly, in declaration order, never via `Ref` (see canonical-form.md).",
       "type": "object",
       "additionalProperties": false,
       "required": ["name", "catalog", "sets", "body"],
@@ -215,6 +215,7 @@
         "name": { "type": "string" },
         "catalog": { "type": "string", "description": "e.g. \"BarbellBackSquat\" (the `$Catalog` name without the `$`)." },
         "sets": { "type": "array", "items": { "$ref": "#/$defs/setRef" } },
+        "groups": { "type": "array", "items": { "$ref": "#/$defs/namedGroup" } },
         "body": { "$ref": "#/$defs/group" }
       }
     },
