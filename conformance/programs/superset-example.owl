@@ -31,4 +31,10 @@ block main = {
         # superset can accept any number of params, also accepts rest blocks as params
         curl;
     }
+
+    push_row_superset;
+    rest(2d);
+
 }
+
+main*5;

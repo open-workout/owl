@@ -73,9 +73,9 @@ block leader = {
     }
 	
 	SE_lower;
-    rest;
+    rest(1d);
     SE_upper;
-    rest;
+    rest(1d);
 	
 }
 
