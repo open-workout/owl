@@ -1,0 +1,94 @@
+{
+  "owlVersion": "0.1.0",
+  "units": "kg",
+  "plates": [25, 20, 15, 10, 5, 2.5, 1.25],
+  "state": [
+    { "path": "tm.squat.weight", "expr": { "type": "number", "value": 100 } }
+  ],
+  "blocks": [
+    {
+      "name": "main",
+      "days": [
+        {
+          "name": "day1",
+          "exercises": [
+            {
+              "name": "squat",
+              "catalog": "BarbellBackSquat",
+              "sets": [
+                {
+                  "type": "setRef",
+                  "label": "top_set",
+                  "exercise": "BarbellBackSquat",
+                  "target": { "kind": "reps", "expr": { "type": "number", "value": 5 } },
+                  "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.squat.weight" }, "unit": "kg" },
+                  "progression": {
+                    "type": "conditional",
+                    "cond": {
+                      "op": ">",
+                      "left": { "type": "path", "path": "tm.squat.weight" },
+                      "right": { "type": "number", "value": 150 }
+                    },
+                    "then": { "scheme": "double", "target": "top_set", "args": [8, 12, 2.5] },
+                    "else": { "scheme": "double", "target": "top_set", "args": [8, 12, 5] }
+                  }
+                }
+              ],
+              "groups": [],
+              "body": {
+                "type": "group",
+                "kind": "straight",
+                "interleave": "sequential",
+                "rest": { "mode": "single" },
+                "termination": { "mode": "count", "n": 1 },
+                "atomic": false,
+                "members": [
+                  {
+                    "type": "setRef",
+                    "label": "top_set",
+                    "exercise": "BarbellBackSquat",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 5 } },
+                    "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.squat.weight" }, "unit": "kg" },
+                    "progression": {
+                      "type": "conditional",
+                      "cond": {
+                        "op": ">",
+                        "left": { "type": "path", "path": "tm.squat.weight" },
+                        "right": { "type": "number", "value": 150 }
+                      },
+                      "then": { "scheme": "double", "target": "top_set", "args": [8, 12, 2.5] },
+                      "else": { "scheme": "double", "target": "top_set", "args": [8, 12, 5] }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "groups": [],
+          "body": {
+            "type": "group",
+            "kind": "straight",
+            "interleave": "sequential",
+            "rest": { "mode": "single" },
+            "termination": { "mode": "count", "n": 1 },
+            "atomic": false,
+            "members": [
+              { "type": "ref", "name": "squat" }
+            ]
+          }
+        }
+      ],
+      "body": {
+        "type": "group",
+        "kind": "straight",
+        "interleave": "sequential",
+        "rest": { "mode": "single" },
+        "termination": { "mode": "count", "n": 1 },
+        "atomic": false,
+        "members": [
+          { "type": "ref", "name": "day1" }
+        ]
+      }
+    }
+  ]
+}

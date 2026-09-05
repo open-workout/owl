@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://owl-lang.org/spec/canonical-form.schema.json",
   "title": "OWL canonical form",
-  "description": "The structural compilation target for an OWL program, as consumed by the OpenWorkout app runtime and the conformance corpus. See canonical-form.md for a prose walkthrough, semantics/groups.md for the desugaring rules that produce the `group` shape, and semantics/targets-loads.md for `target`/`load`. This form is athlete-agnostic: catalogField references and fallbacks are resolved by the separate resolve() pass (semantics/resolution.md), not baked in here.",
+  "description": "The structural compilation target for an OWL program, as consumed by the OpenWorkout app runtime and the conformance corpus. See canonical-form.md for a prose walkthrough, semantics/groups.md for the desugaring rules that produce the `group` shape, semantics/targets-loads.md for `target`/`load`, and semantics/conditionals.md for the `conditional` shape (`conditionalMember`/`conditionalProgression`). This form is athlete-agnostic: catalogField references, fallbacks, and which branch of a `conditional` applies are all resolved by the separate resolve() pass (semantics/resolution.md), not baked in here.",
   "type": "object",
   "additionalProperties": false,
   "required": ["owlVersion", "units", "state", "blocks"],
@@ -123,6 +123,44 @@
       }
     },
 
+    "boolExpr": {
+      "description": "A relational condition (grammar `condExpr`), used only as a `conditional` node's `cond`. '!=' is not yet attested; see semantics/conditionals.md's open questions.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "left", "right"],
+      "properties": {
+        "op": { "type": "string", "enum": ["<", ">", "<=", ">=", "=="] },
+        "left": { "$ref": "#/$defs/expr" },
+        "right": { "$ref": "#/$defs/expr" }
+      }
+    },
+
+    "conditionalMember": {
+      "description": "Compiled form of an `if cond then: A else B` whose branches are members (grammar's condDayItem/condBlockItem/condTopLevelItem — semantics/conditionals.md). `cond` reads `state`, so structural compilation preserves both branches unevaluated; `resolve` picks one and replaces this node with it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "cond", "then", "else"],
+      "properties": {
+        "type": { "const": "conditional" },
+        "cond": { "$ref": "#/$defs/boolExpr" },
+        "then": { "$ref": "#/$defs/member" },
+        "else": { "$ref": "#/$defs/member" }
+      }
+    },
+
+    "conditionalProgression": {
+      "description": "Compiled form of an `if cond then: progress = ... else progress = ...` (grammar's condExerciseItem — semantics/conditionals.md), attached at `setRef.progression`. Same resolve-time-selection treatment as `conditionalMember`, but between two `progressionRule`s that share the same `target` rather than between two members.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "cond", "then", "else"],
+      "properties": {
+        "type": { "const": "conditional" },
+        "cond": { "$ref": "#/$defs/boolExpr" },
+        "then": { "$ref": "#/$defs/progressionRule" },
+        "else": { "$ref": "#/$defs/progressionRule" }
+      }
+    },
+
     "setRef": {
       "type": "object",
       "additionalProperties": false,
@@ -133,7 +171,12 @@
         "exercise": { "type": "string", "description": "Catalog name, e.g. \"BarbellBackSquat\"." },
         "target": { "$ref": "#/$defs/target" },
         "load": { "$ref": "#/$defs/load" },
-        "progression": { "$ref": "#/$defs/progressionRule" }
+        "progression": {
+          "oneOf": [
+            { "$ref": "#/$defs/progressionRule" },
+            { "$ref": "#/$defs/conditionalProgression" }
+          ]
+        }
       }
     },
 
@@ -152,7 +195,8 @@
       "oneOf": [
         { "$ref": "#/$defs/setRef" },
         { "$ref": "#/$defs/ref" },
-        { "$ref": "#/$defs/group" }
+        { "$ref": "#/$defs/group" },
+        { "$ref": "#/$defs/conditionalMember" }
       ]
     },
 

@@ -1,0 +1,29 @@
+state = {
+    tm.fatigue = 0
+}
+
+units = "kg"
+plates = [25, 20, 15, 10, 5, 2.5, 1.25]
+
+block main = {
+    day heavy = {
+        exercise squat = $BarbellBackSquat {
+            set _ = 5 @ 100kg
+        }
+        squat;
+    }
+
+    day light = {
+        exercise squat = $BarbellBackSquat {
+            set _ = 5 @ 60kg
+        }
+        squat;
+    }
+
+    if tm.fatigue >= 7 then:
+        light;
+    else
+        heavy;
+}
+
+main*5;

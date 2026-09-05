@@ -13,10 +13,12 @@
 
    Source of truth: conformance/programs/*.owl. Every production
    below is backed by at least one example in that directory; see
-   spec/semantics/ for what each production compiles to and
+   spec/semantics/ for what each production compiles to,
    spec/semantics/groups.md for a short list of constructs that are
    proposed but not yet attested (dropset, restpause, explicit
-   superset rest-args).
+   superset rest-args), and spec/semantics/conditionals.md for the
+   `if`/`then`/`else` family's compiled shape and its own open
+   questions (a `setDecl` conditional branch, and `!=`).
    ============================================================ *)
 
 
@@ -49,6 +51,7 @@ topLevelItem   ::= ( stateSection
                     | unitsDecl
                     | platesDecl
                     | blockDecl
+                    | condTopLevelItem
                     | stmt
                     ) ';'?
 
@@ -72,16 +75,16 @@ unitsDecl      ::= 'units' '=' STRING
 platesDecl     ::= 'plates' '=' '[' NUMBER ( ',' NUMBER )* ']'
 
 blockDecl      ::= 'block' IDENT '=' '{' blockItem* '}'
-blockItem      ::= ( dayDecl | stmt ) ';'?
+blockItem      ::= ( dayDecl | condBlockItem | stmt ) ';'?
 
 dayDecl        ::= 'day' IDENT '=' '{' dayItem* '}'
-dayItem        ::= ( exerciseDecl | stmt ) ';'?
+dayItem        ::= ( exerciseDecl | condDayItem | stmt ) ';'?
 
 
 (* ---- Exercise declarations ---- *)
 
 exerciseDecl   ::= 'exercise' IDENT '=' CATALOG_NAME '{' exerciseItem* '}'
-exerciseItem   ::= ( setDecl | progressDecl | dropsetDecl ) ';'?
+exerciseItem   ::= ( setDecl | progressDecl | dropsetDecl | condExerciseItem ) ';'?
 
 setDecl        ::= 'set' ( IDENT | '_' ) '=' quantity ( '@' quantity )? dropModifier?
 progressDecl   ::= 'progress' '=' IDENT '(' argList? ')'
@@ -116,6 +119,34 @@ assignStmt     ::= IDENT '=' groupExpr
 repeatStmt     ::= ref '*' NUMBER
 restStmt       ::= 'rest' '(' duration ')'
 ref            ::= IDENT
+
+
+(* ---- Conditionals ----
+   `if cond then: A else B` picks between two alternatives of whatever
+   item list it appears in — an exerciseItem (set/progress selection,
+   if-then-else-for-progress.owl), a dayItem (exercise/group selection,
+   if-then-else.owl), a blockItem (day selection,
+   if-then-else-for-days.owl), or a topLevelItem (block selection,
+   if-then-else-for-blocks.owl). `cond` reads `state` (a per-athlete
+   value), so — unlike every other construct in this file — a
+   conditional is NOT resolved away during structural compilation; both
+   branches survive into canonical form and `resolve` picks one. See
+   spec/semantics/conditionals.md.
+
+   The trailing ':' after 'then' is attested both present
+   (if-then-else.owl) and absent (if-then-else-for-progress.owl) — purely
+   cosmetic, like the optional ';' item separator. 'else' itself is
+   required: no attested example omits it. *)
+
+condExpr       ::= expr relOp expr
+relOp          ::= '<' | '>' | '<=' | '>=' | '=='
+   (* '!=' is a natural, unattested extension — see conditionals.md's
+      open questions. *)
+
+condExerciseItem ::= 'if' condExpr 'then' ':'? exerciseItem 'else' exerciseItem
+condDayItem      ::= 'if' condExpr 'then' ':'? dayItem      'else' dayItem
+condBlockItem    ::= 'if' condExpr 'then' ':'? blockItem    'else' blockItem
+condTopLevelItem ::= 'if' condExpr 'then' ':'? topLevelItem 'else' topLevelItem
 
 
 (* ---- Group expressions ----

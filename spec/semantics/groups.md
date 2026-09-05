@@ -40,7 +40,10 @@ Group {
 
 This structural expansion — including the desugaring rules in §3 below — is
 athlete-agnostic and happens once, at parse-to-canonical-form time. It does
-not depend on any athlete's `state`; see
+not depend on any athlete's `state` — the one exception is `if`/`then`/
+`else`, whose `cond` *does* read `state`; see
+[`conditionals.md`](./conditionals.md) for the separate `Conditional` node
+this produces and why picking its branch is deferred to `resolve`. See
 [`resolution.md`](./resolution.md) for the separate, per-athlete pass that
 resolves the *values* (catalog fields, fallbacks) inside the members this
 document produces.
