@@ -1,0 +1,44 @@
+stats = {
+    tm.variable = 10
+
+}
+
+units = "kg"
+plates = [25, 20, 15, 10, 5, 2.5, 1.25]
+
+block main = {
+    day push_row_superset = {
+        exercise bench = $BarbellBenchPress {
+            set _ = 10 @ 100kg
+            set _ = 8  @ 100kg
+            set _ = 6  @ 100kg
+        }
+
+        exercise row = $CardioRower {
+            set _ = 100m
+            set _ = 100m
+            set _ = 100m
+        }
+
+        exercise curl = $DumbbellCurl {
+            set _ = 12 @ 15kg
+            set _ = 12 @ 15kg
+            set _ = 12 @ 15kg
+        }
+
+
+        if tm.variable < 15 then:
+            superset(bench, row); 
+        else 
+            bench;
+        # this compiles to a group with "interleave" = "round_robin"
+        # superset can accept any number of params, also accepts rest blocks as params
+        curl;
+    }
+
+    push_row_superset;
+    rest(2d);
+
+}
+
+main*5;
