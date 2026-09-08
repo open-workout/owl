@@ -27,14 +27,19 @@ resolve(program: CanonicalProgram, state: State) -> Session
 
 ## 2. What resolution does
 
-Walk the selected subtree. Wherever a `Conditional` node is encountered (a
-`members` entry, or a `SetRef.progression` value) — see
-[`conditionals.md`](./conditionals.md) — resolve its `cond`'s two `Expr`s
-using the same steps below, evaluate the comparison, and replace the
+Walk the selected subtree. Wherever a `Conditional` node is encountered
+(a `members` entry) — see [`conditionals.md`](./conditionals.md) —
+resolve its `cond` (recursively, for `and`/`or`; using the same steps
+below for each `Comparison`'s two `Expr`s), evaluate it, and replace the
 `Conditional` with whichever of `then`/`else` it picks, recursively
 resolved the same way; the branch not taken is dropped and never appears
-in the output. For every other `Expr` node encountered inside a `target`
-or `load` (see [`targets-loads.md`](./targets-loads.md)):
+in the output. An `exerciseDecl.progress` block, if present, is **not**
+touched by this walk at all — it has no session log yet to evaluate its
+`LogExpr`s against (that's `progress`'s job, after this `Session` is
+logged), so it passes through into the output completely unresolved; see
+[`progression.md`](./progression.md) §2. For every other `Expr` node
+encountered inside a `target` or `load` (see
+[`targets-loads.md`](./targets-loads.md)):
 
 1. **Catalog field reference** (`$Exercise.field`, e.g.
    `$BarbellBackSquat.e1rm`) — look up this athlete's most recent recorded
@@ -72,7 +77,9 @@ except:
   a `NamedGroup`'s `group`, another `Day`'s `body`, etc. A `Session` is
   meant to be handed straight to the app for execution, so it carries no
   further name lookups — `superset(bench, row)`'s `Ref(bench)`/`Ref(row)`
-  become the fully resolved sets themselves.
+  become the fully resolved sets themselves;
+- an `ExerciseDecl`'s `progress` field, if present, survives verbatim —
+  see the note above.
 
 ## 3. Idempotence and caching
 

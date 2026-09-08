@@ -120,7 +120,7 @@ func (c *compiler) compileItem(raw any, sc *scope, groupsSink *[]ir.NamedGroup) 
 		if thenMember == nil || elseMember == nil {
 			return nil, nil, fmt.Errorf("%s: conditional branches must both produce a schedulable item", item.Pos)
 		}
-		cond, err := c.compileCond(item.Cond, sc)
+		cond, err := c.compileCond(item.Cond, sc, c.compileExpr)
 		if err != nil {
 			return nil, nil, err
 		}

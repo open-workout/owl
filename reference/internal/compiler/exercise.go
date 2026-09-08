@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/open-workout/owl/reference/internal/ir"
 	"github.com/open-workout/owl/reference/internal/parser"
@@ -38,16 +39,17 @@ type bodyItem struct {
 // compileExerciseDecl compiles one `exercise name = $Catalog { ... }`.
 // Two passes over ed.Items: sets/dropsets are built first (in source
 // order, so a later local reference like `top.weight` can see an
-// earlier sibling set), then `progress` lines — which in every attested
-// example follow their target set — attach ProgressionRules onto the
-// already-built SetRef pointers.
+// earlier sibling set), then the exercise's single `progress` block (if
+// any) is compiled against the now-complete scope — every set it's
+// declared, so a `top_set.reps` log read works regardless of whether
+// `progress` came before or after `top_set` in source.
 func (c *compiler) compileExerciseDecl(ed *parser.ExerciseDecl, parent *scope) (*ir.ExerciseDecl, error) {
 	sc := newScope(parent)
 
 	var body []bodyItem
 	var flatOrder []*ir.SetRef
 	var namedDropsets []*dropsetBuild
-	var progressItems []any // *parser.ProgressDecl | *parser.CondItem (wrapping ProgressDecl)
+	var progressDecl *parser.ProgressDecl
 
 	for _, raw := range ed.Items {
 		switch item := raw.(type) {
@@ -70,48 +72,23 @@ func (c *compiler) compileExerciseDecl(ed *parser.ExerciseDecl, parent *scope) (
 			namedDropsets = append(namedDropsets, db)
 			body = append(body, bodyItem{dropset: db})
 		case *parser.ProgressDecl:
-			progressItems = append(progressItems, item)
-		case *parser.CondItem:
-			if _, ok := item.Then.(*parser.ProgressDecl); ok {
-				progressItems = append(progressItems, item)
-			} else {
-				return nil, fmt.Errorf("%s: a conditional %T at exercise level is not yet supported (only conditional 'progress' is — spec/semantics/conditionals.md §4)", item.Pos, item.Then)
+			if progressDecl != nil {
+				return nil, fmt.Errorf("%s: exercise %q already has a 'progress' block (at most one per exercise — spec/semantics/progression.md §2)", item.Pos, ed.Name)
 			}
+			progressDecl = item
+		case *parser.CondItem:
+			return nil, fmt.Errorf("%s: a conditional %T at exercise level is not yet supported (spec/semantics/conditionals.md §2's note) — put the condition inside 'progress = { ... }' instead", item.Pos, item.Then)
 		default:
 			return nil, fmt.Errorf("compiler: unexpected exercise item %T", raw)
 		}
 	}
 
-	for _, raw := range progressItems {
-		switch item := raw.(type) {
-		case *parser.ProgressDecl:
-			ref, rule, err := c.buildProgressionRule(item, sc)
-			if err != nil {
-				return nil, err
-			}
-			ref.Progression = rule
-		case *parser.CondItem:
-			thenPD := item.Then.(*parser.ProgressDecl)
-			elsePD, ok := item.Else.(*parser.ProgressDecl)
-			if !ok {
-				return nil, fmt.Errorf("%s: conditional progress: else branch must also be 'progress'", item.Pos)
-			}
-			thenRef, thenRule, err := c.buildProgressionRule(thenPD, sc)
-			if err != nil {
-				return nil, err
-			}
-			elseRef, elseRule, err := c.buildProgressionRule(elsePD, sc)
-			if err != nil {
-				return nil, err
-			}
-			if thenRef != elseRef {
-				return nil, fmt.Errorf("%s: conditional progress: then/else target different sets (%q vs %q)", item.Pos, thenRule.Target, elseRule.Target)
-			}
-			cond, err := c.compileCond(item.Cond, sc)
-			if err != nil {
-				return nil, err
-			}
-			thenRef.Progression = ir.ConditionalProgression{Cond: cond, Then: thenRule, Else: elseRule}
+	var progress *ir.ProgressionBody
+	if progressDecl != nil {
+		var err error
+		progress, err = c.compileProgressionBody(progressDecl, sc)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -138,7 +115,7 @@ func (c *compiler) compileExerciseDecl(ed *parser.ExerciseDecl, parent *scope) (
 		Termination: ir.CountTermination{N: len(members)}, Atomic: false, Members: members,
 	}
 
-	return &ir.ExerciseDecl{Name: ed.Name, Catalog: ed.Catalog, Sets: sets, Groups: groups, Body: bodyGroup}, nil
+	return &ir.ExerciseDecl{Name: ed.Name, Catalog: ed.Catalog, Sets: sets, Groups: groups, Body: bodyGroup, Progress: progress}, nil
 }
 
 // buildSetDecl compiles one `set` line. If it carries a `drop(...)`
@@ -212,28 +189,59 @@ func (c *compiler) buildDropsetDecl(dd *parser.DropsetDecl, parent *scope, catal
 	return db, nil
 }
 
-// buildProgressionRule resolves a `progress = scheme(target, ...args)`
-// line: Args[0] must be a set-label reference (bare or
-// dropset-qualified), the rest must be number literals.
-func (c *compiler) buildProgressionRule(pd *parser.ProgressDecl, sc *scope) (*ir.SetRef, ir.ProgressionRule, error) {
-	if len(pd.Args) == 0 {
-		return nil, ir.ProgressionRule{}, fmt.Errorf("%s: progress %q: missing target argument", pd.Pos, pd.Scheme)
-	}
-	dp, ok := pd.Args[0].(*parser.DottedPath)
-	if !ok {
-		return nil, ir.ProgressionRule{}, fmt.Errorf("%s: progress %q: first argument must be a set label", pd.Pos, pd.Scheme)
-	}
-	ref, label, err := resolveLabelRef(dp, sc)
+// compileProgressionBody compiles an exercise's `progress = { ... }`
+// block (spec/semantics/progression.md §2) against a scope that already
+// has every set/dropset in the exercise registered.
+func (c *compiler) compileProgressionBody(pd *parser.ProgressDecl, sc *scope) (*ir.ProgressionBody, error) {
+	stmts, err := c.compileProgressStmtList(pd.Body, sc)
 	if err != nil {
-		return nil, ir.ProgressionRule{}, err
+		return nil, err
 	}
-	var args []float64
-	for i, a := range pd.Args[1:] {
-		lit, ok := a.(*parser.NumberLit)
-		if !ok {
-			return nil, ir.ProgressionRule{}, fmt.Errorf("%s: progress %q: argument %d must be a number literal", pd.Pos, pd.Scheme, i+2)
+	return &ir.ProgressionBody{Stmts: stmts}, nil
+}
+
+func (c *compiler) compileProgressStmtList(items []any, sc *scope) ([]ir.ProgressionStmt, error) {
+	if items == nil {
+		return nil, nil
+	}
+	stmts := make([]ir.ProgressionStmt, len(items))
+	for i, raw := range items {
+		s, err := c.compileProgressStmt(raw, sc)
+		if err != nil {
+			return nil, err
 		}
-		args = append(args, lit.Value)
+		stmts[i] = s
 	}
-	return ref, ir.ProgressionRule{Scheme: pd.Scheme, Target: label, Args: args}, nil
+	return stmts, nil
+}
+
+func (c *compiler) compileProgressStmt(raw any, sc *scope) (ir.ProgressionStmt, error) {
+	switch item := raw.(type) {
+	case *parser.ProgressAssign:
+		path := strings.Join(item.Path.Segments, ".")
+		if !c.stateRoots[item.Path.Segments[0]] {
+			return nil, fmt.Errorf("%s: progress assignment target %q is not a declared state path", item.Pos, path)
+		}
+		expr, err := c.compileProgressExpr(item.Expr, sc)
+		if err != nil {
+			return nil, err
+		}
+		return ir.Assign{Path: path, Expr: expr}, nil
+	case *parser.ProgressIf:
+		cond, err := c.compileCond(item.Cond, sc, c.compileProgressExpr)
+		if err != nil {
+			return nil, err
+		}
+		then, err := c.compileProgressStmtList(item.Then, sc)
+		if err != nil {
+			return nil, err
+		}
+		els, err := c.compileProgressStmtList(item.Else, sc)
+		if err != nil {
+			return nil, err
+		}
+		return ir.ProgressionIf{Cond: cond, Then: then, Else: els}, nil
+	default:
+		return nil, fmt.Errorf("compiler: unexpected progress statement %T", raw)
+	}
 }

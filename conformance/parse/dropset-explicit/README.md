@@ -8,10 +8,11 @@ named and addressable as `ds.top`) and embedded directly in `legext`'s
 local-set-reference substitution in `targets-loads.md` §4 — `0.8 *
 top.weight` compiles to `0.8 * tm.leg_ext.weight`, not a new node type.
 
-`progress = double(ds.top, 8, 15, 5)` resolves `ds.top` to the `top`
-`SetRef` inside `ds` and attaches there; the stored
-`progression.target` is the bare label `"top"` (the qualification was
-only needed for lookup — see `groups.md` §3.8).
+`progress = { if ds.top.reps >= 15 then ... }` reads `ds.top.reps` as
+what was actually logged for the `top` `SetRef` inside `ds` — compiled
+to `{"type":"log","label":"top",...}`, the dropset qualification
+resolved away to the bare label (the qualification is only needed for
+lookup — see `groups.md` §3.8, `progression.md` §2).
 
 Compare [`../dropset-sugar/`](../dropset-sugar/) — the same canonical
 `Group`, produced by the `drop(...)` sugar instead, differing only in

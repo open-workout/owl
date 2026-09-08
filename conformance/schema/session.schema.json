@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://owl-lang.org/conformance/schema/session.schema.json",
   "title": "Conformance fixture: resolved Session",
-  "description": "What resolve() (spec/semantics/resolution.md) produces: a Day-shaped document with every Expr replaced by a plain resolved value and every Ref inlined. Mirrors spec/canonical-form.schema.json's `day`, `target`, `load`, `member`, `group` defs but with `expr` replaced by `value` and no `ref` variant in `member`.",
+  "description": "What resolve() (spec/semantics/resolution.md) produces: a Day-shaped document with every Expr replaced by a plain resolved value and every Ref inlined. Mirrors spec/canonical-form.schema.json's `day`, `target`, `load`, `member`, `group` defs but with `expr` replaced by `value` and no `ref` variant in `member`. The one exception is `exerciseDecl.progress`: resolve() does not touch it (it has no session log to interpret it against yet — that's progress()'s job, after this Session is logged), so it carries the *same* unresolved shape as spec/canonical-form.schema.json's `progressionBody` (symbolic `expr`/`dottedPath`, not resolved values).",
   "$ref": "#/$defs/session",
 
   "$defs": {
@@ -35,14 +35,79 @@
       ]
     },
 
-    "progressionRule": {
+    "dottedPath": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$" },
+
+    "expr": {
+      "description": "Unresolved, same shape as canonical-form.schema.json's `expr` — only ever appears inside `exerciseDecl.progress`, which resolve() passes through untouched.",
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["type", "value"], "properties": {
+          "type": { "const": "number" }, "value": { "type": "number" } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "path"], "properties": {
+          "type": { "const": "path" }, "path": { "$ref": "#/$defs/dottedPath" } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "catalog", "field"], "properties": {
+          "type": { "const": "catalogField" }, "catalog": { "type": "string" }, "field": { "type": "string" } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "left", "right"], "properties": {
+          "type": { "const": "mul" }, "left": { "$ref": "#/$defs/expr" }, "right": { "$ref": "#/$defs/expr" } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "left", "right"], "properties": {
+          "type": { "const": "add" }, "left": { "$ref": "#/$defs/expr" }, "right": { "$ref": "#/$defs/expr" } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "left", "right"], "properties": {
+          "type": { "const": "sub" }, "left": { "$ref": "#/$defs/expr" }, "right": { "$ref": "#/$defs/expr" } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "left", "right"], "properties": {
+          "type": { "const": "div" }, "left": { "$ref": "#/$defs/expr" }, "right": { "$ref": "#/$defs/expr" } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "label", "field"], "properties": {
+          "type": { "const": "log" }, "label": { "type": "string" }, "field": { "type": "string" } } }
+      ]
+    },
+
+    "boolExpr": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["type", "op", "left", "right"], "properties": {
+          "type": { "const": "comparison" },
+          "op": { "type": "string", "enum": ["<", ">", "<=", ">=", "==", "!="] },
+          "left": { "$ref": "#/$defs/expr" }, "right": { "$ref": "#/$defs/expr" } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "left", "right"], "properties": {
+          "type": { "const": "and" }, "left": { "$ref": "#/$defs/boolExpr" }, "right": { "$ref": "#/$defs/boolExpr" } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "left", "right"], "properties": {
+          "type": { "const": "or" }, "left": { "$ref": "#/$defs/boolExpr" }, "right": { "$ref": "#/$defs/boolExpr" } } }
+      ]
+    },
+
+    "assign": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["scheme", "target"],
+      "required": ["type", "path", "expr"],
       "properties": {
-        "scheme": { "type": "string" },
-        "target": { "type": "string" },
-        "args": { "type": "array", "items": { "type": "number" } }
+        "type": { "const": "assign" },
+        "path": { "$ref": "#/$defs/dottedPath" },
+        "expr": { "$ref": "#/$defs/expr" }
+      }
+    },
+
+    "progressionIf": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "cond", "then"],
+      "properties": {
+        "type": { "const": "if" },
+        "cond": { "$ref": "#/$defs/boolExpr" },
+        "then": { "type": "array", "items": { "$ref": "#/$defs/progressionStmt" } },
+        "else": { "type": "array", "items": { "$ref": "#/$defs/progressionStmt" } }
+      }
+    },
+
+    "progressionStmt": {
+      "oneOf": [
+        { "$ref": "#/$defs/assign" },
+        { "$ref": "#/$defs/progressionIf" }
+      ]
+    },
+
+    "progressionBody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stmts"],
+      "properties": {
+        "stmts": { "type": "array", "items": { "$ref": "#/$defs/progressionStmt" } }
       }
     },
 
@@ -55,8 +120,7 @@
         "label": { "type": "string" },
         "exercise": { "type": "string" },
         "target": { "$ref": "#/$defs/target" },
-        "load": { "$ref": "#/$defs/load" },
-        "progression": { "$ref": "#/$defs/progressionRule" }
+        "load": { "$ref": "#/$defs/load" }
       }
     },
 
@@ -111,7 +175,8 @@
         "catalog": { "type": "string" },
         "sets": { "type": "array", "items": { "$ref": "#/$defs/setRef" } },
         "groups": { "type": "array", "items": { "$ref": "#/$defs/namedGroup" } },
-        "body": { "$ref": "#/$defs/group" }
+        "body": { "$ref": "#/$defs/group" },
+        "progress": { "$ref": "#/$defs/progressionBody" }
       }
     },
 

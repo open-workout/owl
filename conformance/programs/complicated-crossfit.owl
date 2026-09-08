@@ -12,7 +12,13 @@ block main = {
         # ── Part A — Back Squat, every 3:00 * 5  (clock-cadence group) ──
         exercise back_squat = $BarbellBackSquat {
             set work = tm.squat.reps @ 0.8 * tm.squat.weight
-            progress = double(work, 3, 5, 5)          # parameter-based, progresses
+            progress = {                               # parameter-based, progresses
+                if work.reps >= 5 then
+                    tm.squat.weight = tm.squat.weight + 5
+                    tm.squat.reps = 3
+                else if work.reps >= 3 then
+                    tm.squat.reps = tm.squat.reps + 1
+            }
         }
         partA = 5*emom(3m){ back_squat }             # 5 rounds, 3-min cadence, remainder = rest
 

@@ -12,12 +12,24 @@ block main = {
     day day1 = {
         exercise squat = $BarbellBackSquat {
             set top_set = tm.squat.reps @ tm.squat.weight
-            progress = double(top_set, 8, 12, 5)
+            progress = {
+                if top_set.reps >= 12 then
+                    tm.squat.weight = tm.squat.weight + 5
+                    tm.squat.reps = 8
+                else if top_set.reps >= 8 then
+                    tm.squat.reps = tm.squat.reps + 1
+            }
         }
         squat;
     }
 }
 ```
+
+(`progress` isn't resolve()'s concern — see
+[`../conditional-progress-else-branch/`](../conditional-progress-else-branch/)
+for the fixture demonstrating it passes through unresolved. It's kept
+here to make this a realistic program; nothing about it affects what
+this fixture actually asserts.)
 
 `state.json` has no recorded `BarbellBackSquat.e1rm` and no stored
 `tm.squat.weight` binding, so `resolve` must take the numeric fallback

@@ -74,16 +74,30 @@ type DropModifier struct {
 	Factors []float64
 }
 
-// ProgressDecl is `progress = scheme(arg0, arg1, ...)`. Args[0] is
-// conventionally a set-label reference (a bare label or a
-// dropset-qualified `ds.label`); the rest must be numeric literals — see
-// spec/semantics/progression.md and stdlib/schemes.md. The parser keeps
-// all args as plain Expr (grammar's argList is untyped); the compiler
-// enforces the label/numeric split.
+// ProgressDecl is `progress = { ... }` — at most one per exercise
+// (spec/semantics/progression.md §2), a small code block rather than a
+// call into a named scheme.
 type ProgressDecl struct {
-	Scheme string
-	Args   []Expr
-	Pos    lexer.Pos
+	Body []any // ProgressStmt variants: *ProgressAssign | *ProgressIf
+	Pos  lexer.Pos
+}
+
+// ProgressAssign is one progressBody statement: `<state path> = <expr>`.
+type ProgressAssign struct {
+	Path DottedPath
+	Expr Expr
+	Pos  lexer.Pos
+}
+
+// ProgressIf is progressBody's own `if`/`then`/`else` (grammar
+// `progressIf`) — unlike CondItem, `Else` may be nil (the only place in
+// the language `else` is optional), and Then/Else are statement lists,
+// not single items.
+type ProgressIf struct {
+	Cond Cond
+	Then []any // ProgressStmt variants
+	Else []any // ProgressStmt variants; nil if omitted
+	Pos  lexer.Pos
 }
 
 type DropsetDecl struct {
@@ -102,11 +116,24 @@ type CondItem struct {
 	Pos  lexer.Pos
 }
 
-type Cond struct {
+// Cond is grammar's condExpr: a single relational comparison, or two
+// conditions combined with 'and'/'or'. Shared verbatim by CondItem and
+// ProgressIf.
+type Cond interface{ isCond() }
+
+type Comparison struct {
 	Op    string // "<" | ">" | "<=" | ">=" | "==" | "!="
 	Left  Expr
 	Right Expr
 }
+
+// AndCond/OrCond: 'and' binds tighter than 'or' — see parseCond.
+type AndCond struct{ Left, Right Cond }
+type OrCond struct{ Left, Right Cond }
+
+func (*Comparison) isCond() {}
+func (*AndCond) isCond()    {}
+func (*OrCond) isCond()     {}
 
 // ---- Statements ----
 // A stmt variant (AssignStmt, RepeatStmt, RestStmt, a GroupExpr,
@@ -236,11 +263,17 @@ type CatalogFieldRef struct {
 }
 
 type MulExpr struct{ Left, Right Expr }
+type DivExpr struct{ Left, Right Expr }
+type AddExpr struct{ Left, Right Expr }
+type SubExpr struct{ Left, Right Expr }
 
 func (*NumberLit) isExpr()       {}
 func (*DottedPath) isExpr()      {}
 func (*CatalogFieldRef) isExpr() {}
 func (*MulExpr) isExpr()         {}
+func (*DivExpr) isExpr()         {}
+func (*AddExpr) isExpr()         {}
+func (*SubExpr) isExpr()         {}
 
 type Duration struct {
 	Value float64

@@ -321,39 +321,81 @@ func TestParseSetDecl_DropModifier(t *testing.T) {
 }
 
 func TestParseProgressDecl(t *testing.T) {
-	p := newParser(t, "progress = double(top_set, 8, 12, 5)")
+	src := `progress = {
+		if top_set.reps >= 12 then
+			tm.squat.weight = tm.squat.weight + 5
+			tm.squat.reps = 8
+		else if top_set.reps >= 8 then
+			tm.squat.reps = tm.squat.reps + 1
+	}`
+	p := newParser(t, src)
 	pd, err := p.parseProgressDecl()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pd.Scheme != "double" {
-		t.Fatalf("got scheme %q", pd.Scheme)
+	if len(pd.Body) != 1 {
+		t.Fatalf("got %d top-level statements, want 1 (the outer if)", len(pd.Body))
 	}
-	if len(pd.Args) != 4 {
-		t.Fatalf("got %d args, want 4", len(pd.Args))
+	outer, ok := pd.Body[0].(*ProgressIf)
+	if !ok {
+		t.Fatalf("got %T, want *ProgressIf", pd.Body[0])
 	}
-	dp, ok := pd.Args[0].(*DottedPath)
-	if !ok || len(dp.Segments) != 1 || dp.Segments[0] != "top_set" {
-		t.Fatalf("arg0: got %+v", pd.Args[0])
+	cmp, ok := outer.Cond.(*Comparison)
+	if !ok || cmp.Op != ">=" {
+		t.Fatalf("got cond %+v", outer.Cond)
 	}
-	for i, want := range []float64{8, 12, 5} {
-		lit, ok := pd.Args[i+1].(*NumberLit)
-		if !ok || lit.Value != want {
-			t.Fatalf("arg%d: got %+v, want %v", i+1, pd.Args[i+1], want)
-		}
+	dp, ok := cmp.Left.(*DottedPath)
+	if !ok || len(dp.Segments) != 2 || dp.Segments[0] != "top_set" || dp.Segments[1] != "reps" {
+		t.Fatalf("cond.left: got %+v", cmp.Left)
+	}
+	if len(outer.Then) != 2 {
+		t.Fatalf("got %d then-statements, want 2", len(outer.Then))
+	}
+	assign, ok := outer.Then[0].(*ProgressAssign)
+	if !ok {
+		t.Fatalf("then[0]: got %T, want *ProgressAssign", outer.Then[0])
+	}
+	if got := assign.Path.Segments; len(got) != 3 || got[2] != "weight" {
+		t.Fatalf("then[0].Path: got %v", got)
+	}
+	if _, ok := assign.Expr.(*AddExpr); !ok {
+		t.Fatalf("then[0].Expr: got %T, want *AddExpr", assign.Expr)
+	}
+	// else-if chaining: outer.Else is exactly one nested *ProgressIf.
+	if len(outer.Else) != 1 {
+		t.Fatalf("got %d else-statements, want 1 (nested if)", len(outer.Else))
+	}
+	inner, ok := outer.Else[0].(*ProgressIf)
+	if !ok {
+		t.Fatalf("else[0]: got %T, want *ProgressIf", outer.Else[0])
+	}
+	if inner.Else != nil {
+		t.Fatalf("inner.Else: got %+v, want nil (omitted in source)", inner.Else)
 	}
 }
 
-func TestParseProgressDecl_DropsetQualifiedTarget(t *testing.T) {
-	p := newParser(t, "progress = double(ds.top, 8, 15, 5)")
-	pd, err := p.parseProgressDecl()
+func TestParseProgressAssign_DropsetQualifiedLog(t *testing.T) {
+	p := newParser(t, "tm.leg_ext.weight = tm.leg_ext.weight + ds.top.weight")
+	a, err := p.parseProgressAssign()
 	if err != nil {
 		t.Fatal(err)
 	}
-	dp := pd.Args[0].(*DottedPath)
-	want := []string{"ds", "top"}
-	if len(dp.Segments) != 2 || dp.Segments[0] != want[0] || dp.Segments[1] != want[1] {
+	add, ok := a.Expr.(*AddExpr)
+	if !ok {
+		t.Fatalf("got %T, want *AddExpr", a.Expr)
+	}
+	dp, ok := add.Right.(*DottedPath)
+	if !ok {
+		t.Fatalf("got %T, want *DottedPath", add.Right)
+	}
+	want := []string{"ds", "top", "weight"}
+	if len(dp.Segments) != len(want) {
 		t.Fatalf("got %v, want %v", dp.Segments, want)
+	}
+	for i := range want {
+		if dp.Segments[i] != want[i] {
+			t.Fatalf("got %v, want %v", dp.Segments, want)
+		}
 	}
 }
 
@@ -394,17 +436,64 @@ func TestParseCond_AllRelOps(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if c.Op != op {
-				t.Fatalf("got op %q, want %q", c.Op, op)
+			cmp, ok := c.(*Comparison)
+			if !ok {
+				t.Fatalf("got %T, want *Comparison", c)
+			}
+			if cmp.Op != op {
+				t.Fatalf("got op %q, want %q", cmp.Op, op)
 			}
 		})
 	}
 }
 
+func TestParseCondOr_AndBindsTighterThanOr(t *testing.T) {
+	// "a and b or c" must parse as "(a and b) or c", not "a and (b or c)".
+	p := newParser(t, "tm.a < 1 and tm.b < 2 or tm.c < 3")
+	c, err := p.parseCond()
+	if err != nil {
+		t.Fatal(err)
+	}
+	or, ok := c.(*OrCond)
+	if !ok {
+		t.Fatalf("got %T, want *OrCond at the top", c)
+	}
+	and, ok := or.Left.(*AndCond)
+	if !ok {
+		t.Fatalf("or.Left: got %T, want *AndCond", or.Left)
+	}
+	if _, ok := and.Left.(*Comparison); !ok {
+		t.Fatalf("and.Left: got %T, want *Comparison", and.Left)
+	}
+	if _, ok := or.Right.(*Comparison); !ok {
+		t.Fatalf("or.Right: got %T, want *Comparison", or.Right)
+	}
+}
+
+func TestParseCondAtom_Parens(t *testing.T) {
+	// Parens override the default and-tighter-than-or precedence.
+	p := newParser(t, "tm.a < 1 and (tm.b < 2 or tm.c < 3)")
+	c, err := p.parseCond()
+	if err != nil {
+		t.Fatal(err)
+	}
+	and, ok := c.(*AndCond)
+	if !ok {
+		t.Fatalf("got %T, want *AndCond at the top", c)
+	}
+	if _, ok := and.Right.(*OrCond); !ok {
+		t.Fatalf("and.Right: got %T, want *OrCond (parenthesized)", and.Right)
+	}
+}
+
 func TestParseCondItem_ExerciseLevel(t *testing.T) {
+	// condExerciseItem still parses (grammar symmetry with the other
+	// three levels) even though the compiler now rejects it — see
+	// spec/semantics/conditionals.md §2's note. A conditional setDecl
+	// branch is the shape that production predates.
 	src := `if tm.squat.weight > 150 then
-		progress = double(top_set,8,12,2.5)
-	else progress = double(top_set,8,12,5)`
+		set _ = 5 @ 100kg
+	else set _ = 5 @ 80kg`
 	p := newParser(t, src)
 	item, err := p.parseExerciseItem()
 	if err != nil {
@@ -414,14 +503,15 @@ func TestParseCondItem_ExerciseLevel(t *testing.T) {
 	if !ok {
 		t.Fatalf("got %T, want *CondItem", item)
 	}
-	if ci.Cond.Op != ">" {
-		t.Fatalf("got op %q", ci.Cond.Op)
+	cmp, ok := ci.Cond.(*Comparison)
+	if !ok || cmp.Op != ">" {
+		t.Fatalf("got cond %+v", ci.Cond)
 	}
-	if _, ok := ci.Then.(*ProgressDecl); !ok {
-		t.Fatalf("Then: got %T, want *ProgressDecl", ci.Then)
+	if _, ok := ci.Then.(*SetDecl); !ok {
+		t.Fatalf("Then: got %T, want *SetDecl", ci.Then)
 	}
-	if _, ok := ci.Else.(*ProgressDecl); !ok {
-		t.Fatalf("Else: got %T, want *ProgressDecl", ci.Else)
+	if _, ok := ci.Else.(*SetDecl); !ok {
+		t.Fatalf("Else: got %T, want *SetDecl", ci.Else)
 	}
 }
 
@@ -462,8 +552,9 @@ func TestParseCondItem_BlockLevel(t *testing.T) {
 	if !ok {
 		t.Fatalf("got %T, want *CondItem", item)
 	}
-	if ci.Cond.Op != ">=" {
-		t.Fatalf("got op %q", ci.Cond.Op)
+	cmp, ok := ci.Cond.(*Comparison)
+	if !ok || cmp.Op != ">=" {
+		t.Fatalf("got cond %+v", ci.Cond)
 	}
 }
 
@@ -501,8 +592,9 @@ func TestParseCondItem_NestedElseIf(t *testing.T) {
 	if !ok {
 		t.Fatalf("Else: got %T, want a nested *CondItem", outer.Else)
 	}
-	if inner.Cond.Op != "==" {
-		t.Fatalf("got %+v", inner.Cond)
+	cmp, ok := inner.Cond.(*Comparison)
+	if !ok || cmp.Op != "==" {
+		t.Fatalf("got cond %+v", inner.Cond)
 	}
 }
 

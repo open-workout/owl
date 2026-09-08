@@ -65,9 +65,9 @@ type SetLog struct {
 	PerformedLoad   *float64
 }
 
-// Progress evaluates every progressable SetRef a session touched against
-// what was logged, and returns the athlete's updated state — see
-// spec/semantics/progression.md, spec/stdlib/schemes.md.
+// Progress runs each exercise's `progress` code against what was logged
+// for that session, and returns the athlete's updated state — see
+// spec/semantics/progression.md.
 func Progress(program *Program, state AthleteState, log []SetLog) (AthleteState, error) {
 	return AthleteState{}, ErrNotImplemented
 }

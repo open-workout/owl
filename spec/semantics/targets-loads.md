@@ -68,9 +68,10 @@ The grammar's `quantity ('@' quantity)?` doesn't distinguish the two
 slots — both are the same `quantity` production. The canonical form does,
 because they mean different things downstream:
 
-- Only `Target.plus` participates in [progression](./progression.md)'s
-  rep-range logic (`double(top_set, 8, 12, 5)` reads the *logged* reps
-  against the target's rep range).
+- Only `Target.plus` marks an open-ended rep target the way
+  [progression](./progression.md) code cares about — e.g. a `progress`
+  block reading `top_set.reps` (the logged value — progression.md §2-3)
+  against a hand-written rep-range condition.
 - Only `Load` participates in plate-math (rounding a resolved weight to
   the nearest achievable value from the `plates` array) — a `Distance` or
   `Duration` target is never run through the plate calculator.
@@ -113,3 +114,16 @@ tm.squat.weight` directly — no new node type in
 see `resolution.md` §3). Only `.weight` is attested; a `.reps`/`.target`
 variant (substituting the referenced set's `target.expr` instead) would
 follow the same rule but isn't demonstrated anywhere yet.
+
+**This is not the same thing `<label>.<field>` means inside a
+`progress` block.** Everywhere on this page, `top.weight` is the
+*prescribed* formula, substituted once at structural-compile time,
+before any session has run. Inside a `progress = { ... }` block
+specifically, the identical spelling instead reads what was *actually
+logged* for that set — compiled to a distinct `LogExpr` node, not this
+substitution — because `progress` only ever runs after a session
+exists to read a log from. See
+[`progression.md`](./progression.md) §2-3 for that shape; the two never
+mix (a `set` line's own `target`/`load` never sees a `LogExpr`, and a
+`progress` block's `assign`/`if` never sees this prescribed-value
+substitution).

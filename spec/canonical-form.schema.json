@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://owl-lang.org/spec/canonical-form.schema.json",
   "title": "OWL canonical form",
-  "description": "The structural compilation target for an OWL program, as consumed by the OpenWorkout app runtime and the conformance corpus. See canonical-form.md for a prose walkthrough, semantics/groups.md for the desugaring rules that produce the `group` shape, semantics/targets-loads.md for `target`/`load`, and semantics/conditionals.md for the `conditional` shape (`conditionalMember`/`conditionalProgression`). This form is athlete-agnostic: catalogField references, fallbacks, and which branch of a `conditional` applies are all resolved by the separate resolve() pass (semantics/resolution.md), not baked in here.",
+  "description": "The structural compilation target for an OWL program, as consumed by the OpenWorkout app runtime and the conformance corpus. See canonical-form.md for a prose walkthrough, semantics/groups.md for the desugaring rules that produce the `group` shape, semantics/targets-loads.md for `target`/`load`, semantics/conditionals.md for the `conditionalMember` shape, and semantics/progression.md for `exerciseDecl.progress`. This form is athlete-agnostic: catalogField references, fallbacks, and which branch of a `conditionalMember` applies are all resolved by the separate resolve() pass (semantics/resolution.md), not baked in here — `progress`'s own code, by contrast, is only ever run by the separate progress() pass (semantics/progression.md), never resolve().",
   "type": "object",
   "additionalProperties": false,
   "required": ["owlVersion", "units", "state", "blocks"],
@@ -52,7 +52,23 @@
         { "type": "object", "additionalProperties": false, "required": ["type", "left", "right"], "properties": {
           "type": { "const": "mul" },
           "left": { "$ref": "#/$defs/expr" },
-          "right": { "$ref": "#/$defs/expr" } } }
+          "right": { "$ref": "#/$defs/expr" } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "left", "right"], "properties": {
+          "type": { "const": "add" },
+          "left": { "$ref": "#/$defs/expr" },
+          "right": { "$ref": "#/$defs/expr" } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "left", "right"], "properties": {
+          "type": { "const": "sub" },
+          "left": { "$ref": "#/$defs/expr" },
+          "right": { "$ref": "#/$defs/expr" } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "left", "right"], "properties": {
+          "type": { "const": "div" },
+          "left": { "$ref": "#/$defs/expr" },
+          "right": { "$ref": "#/$defs/expr" } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "label", "field"], "properties": {
+          "type": { "const": "log" },
+          "label": { "type": "string", "description": "A set's own label (session-log.schema.json's `label`) in the enclosing exercise — already resolved away from any dropset-qualified source spelling (e.g. surface `ds.top.weight` compiles to label \"top\", not \"ds.top\": SetLog is keyed by the set's own label alone). See progression.md §2." },
+          "field": { "type": "string", "description": "e.g. \"reps\", \"weight\" — matches session-log.schema.json's performedTarget/performedLoad, addressed by name rather than a fixed pair of fields so a distance/duration set's log is expressible too." } } }
       ]
     },
 
@@ -112,26 +128,64 @@
       }
     },
 
-    "progressionRule": {
+    "boolExpr": {
+      "description": "A condition (grammar `condExpr`): a relational comparison, or two conditions combined with 'and'/'or'. Used as a `conditionalMember`'s `cond` and a `progressionIf`'s `cond` — the same grammar production, reused by both (semantics/conditionals.md, semantics/progression.md §2).",
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["type", "op", "left", "right"], "properties": {
+          "type": { "const": "comparison" },
+          "op": { "type": "string", "enum": ["<", ">", "<=", ">=", "==", "!="] },
+          "left": { "$ref": "#/$defs/expr" },
+          "right": { "$ref": "#/$defs/expr" } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "left", "right"], "properties": {
+          "type": { "const": "and" },
+          "left": { "$ref": "#/$defs/boolExpr" },
+          "right": { "$ref": "#/$defs/boolExpr" } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "left", "right"], "properties": {
+          "type": { "const": "or" },
+          "left": { "$ref": "#/$defs/boolExpr" },
+          "right": { "$ref": "#/$defs/boolExpr" } } }
+      ]
+    },
+
+    "assign": {
+      "description": "One `progressBody` statement: `<state path> = <expr>` (grammar `progressAssign`). See semantics/progression.md §2.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["scheme", "target"],
+      "required": ["type", "path", "expr"],
       "properties": {
-        "scheme": { "type": "string", "description": "e.g. \"double\". Extensible — not a closed enum. See stdlib/schemes.md." },
-        "target": { "type": "string", "description": "Label of the `set` this rule progresses." },
-        "args": { "type": "array", "items": { "type": "number" } }
+        "type": { "const": "assign" },
+        "path": { "$ref": "#/$defs/dottedPath" },
+        "expr": { "$ref": "#/$defs/expr" }
       }
     },
 
-    "boolExpr": {
-      "description": "A relational condition (grammar `condExpr`), used only as a `conditional` node's `cond`. '!=' is not yet attested; see semantics/conditionals.md's open questions.",
+    "progressionIf": {
+      "description": "One `progressBody` statement: `if cond then … [else …]` (grammar `progressIf`). Unlike `conditionalMember`, this is not deferred to resolve() — progress() runs it directly against the session log and current state, executing only the branch cond picks. `else` is optional (the only place in the language it is); an untaken/absent branch simply performs no assignments.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["op", "left", "right"],
+      "required": ["type", "cond", "then"],
       "properties": {
-        "op": { "type": "string", "enum": ["<", ">", "<=", ">=", "=="] },
-        "left": { "$ref": "#/$defs/expr" },
-        "right": { "$ref": "#/$defs/expr" }
+        "type": { "const": "if" },
+        "cond": { "$ref": "#/$defs/boolExpr" },
+        "then": { "type": "array", "items": { "$ref": "#/$defs/progressionStmt" } },
+        "else": { "type": "array", "items": { "$ref": "#/$defs/progressionStmt" } }
+      }
+    },
+
+    "progressionStmt": {
+      "oneOf": [
+        { "$ref": "#/$defs/assign" },
+        { "$ref": "#/$defs/progressionIf" }
+      ]
+    },
+
+    "progressionBody": {
+      "description": "An exercise's `progress = { … }` block (grammar `progressBody`) — at most one per `exerciseDecl`, run once per completed session by progress() (semantics/progression.md).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stmts"],
+      "properties": {
+        "stmts": { "type": "array", "items": { "$ref": "#/$defs/progressionStmt" } }
       }
     },
 
@@ -148,19 +202,6 @@
       }
     },
 
-    "conditionalProgression": {
-      "description": "Compiled form of an `if cond then: progress = ... else progress = ...` (grammar's condExerciseItem — semantics/conditionals.md), attached at `setRef.progression`. Same resolve-time-selection treatment as `conditionalMember`, but between two `progressionRule`s that share the same `target` rather than between two members.",
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["type", "cond", "then", "else"],
-      "properties": {
-        "type": { "const": "conditional" },
-        "cond": { "$ref": "#/$defs/boolExpr" },
-        "then": { "$ref": "#/$defs/progressionRule" },
-        "else": { "$ref": "#/$defs/progressionRule" }
-      }
-    },
-
     "setRef": {
       "type": "object",
       "additionalProperties": false,
@@ -170,13 +211,7 @@
         "label": { "type": "string", "description": "Omitted/absent for anonymous inline calls (surface `_` or bare `$Catalog(...)`)." },
         "exercise": { "type": "string", "description": "Catalog name, e.g. \"BarbellBackSquat\"." },
         "target": { "$ref": "#/$defs/target" },
-        "load": { "$ref": "#/$defs/load" },
-        "progression": {
-          "oneOf": [
-            { "$ref": "#/$defs/progressionRule" },
-            { "$ref": "#/$defs/conditionalProgression" }
-          ]
-        }
+        "load": { "$ref": "#/$defs/load" }
       }
     },
 
@@ -251,7 +286,7 @@
     },
 
     "exerciseDecl": {
-      "description": "An `exercise <name> = $Catalog { set ... }` declaration. `name` is the local alias later `Ref`s use (e.g. `back_squat;`, or as a `superset(...)` argument) — distinct from `catalog`, the exercise-library entry. `sets` holds only flat, top-level sets (not ones nested inside a `groups` entry); `groups` holds named `dropset` declarations (semantics/groups.md §3.8), mirroring `day.groups` for `partA`-style assignments. `body` is this declaration's own straight-set Group (semantics/groups.md §3.1), used when `name` is invoked bare — its members embed `sets`/`groups` directly, in declaration order, never via `Ref` (see canonical-form.md).",
+      "description": "An `exercise <name> = $Catalog { set ... }` declaration. `name` is the local alias later `Ref`s use (e.g. `back_squat;`, or as a `superset(...)` argument) — distinct from `catalog`, the exercise-library entry. `sets` holds only flat, top-level sets (not ones nested inside a `groups` entry); `groups` holds named `dropset` declarations (semantics/groups.md §3.8), mirroring `day.groups` for `partA`-style assignments. `body` is this declaration's own straight-set Group (semantics/groups.md §3.1), used when `name` is invoked bare — its members embed `sets`/`groups` directly, in declaration order, never via `Ref` (see canonical-form.md). `progress`, if present, is this exercise's single progression code block (semantics/progression.md) — unlike `sets`/`groups`/`body`, it plays no role in resolve()'s Session output; it's only ever run by progress().",
       "type": "object",
       "additionalProperties": false,
       "required": ["name", "catalog", "sets", "body"],
@@ -260,7 +295,8 @@
         "catalog": { "type": "string", "description": "e.g. \"BarbellBackSquat\" (the `$Catalog` name without the `$`)." },
         "sets": { "type": "array", "items": { "$ref": "#/$defs/setRef" } },
         "groups": { "type": "array", "items": { "$ref": "#/$defs/namedGroup" } },
-        "body": { "$ref": "#/$defs/group" }
+        "body": { "$ref": "#/$defs/group" },
+        "progress": { "$ref": "#/$defs/progressionBody" }
       }
     },
 

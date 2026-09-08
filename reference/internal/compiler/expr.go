@@ -20,20 +20,122 @@ func (c *compiler) compileExpr(e parser.Expr, sc *scope) (ir.Expr, error) {
 	case *parser.CatalogFieldRef:
 		return ir.CatalogFieldExpr{Catalog: v.Catalog, Field: v.Field}, nil
 	case *parser.MulExpr:
-		left, err := c.compileExpr(v.Left, sc)
-		if err != nil {
-			return nil, err
-		}
-		right, err := c.compileExpr(v.Right, sc)
+		left, right, err := c.compileBinOperands(v.Left, v.Right, sc, c.compileExpr)
 		if err != nil {
 			return nil, err
 		}
 		return ir.MulExpr{Left: left, Right: right}, nil
+	case *parser.DivExpr:
+		left, right, err := c.compileBinOperands(v.Left, v.Right, sc, c.compileExpr)
+		if err != nil {
+			return nil, err
+		}
+		return ir.DivExpr{Left: left, Right: right}, nil
+	case *parser.AddExpr:
+		left, right, err := c.compileBinOperands(v.Left, v.Right, sc, c.compileExpr)
+		if err != nil {
+			return nil, err
+		}
+		return ir.AddExpr{Left: left, Right: right}, nil
+	case *parser.SubExpr:
+		left, right, err := c.compileBinOperands(v.Left, v.Right, sc, c.compileExpr)
+		if err != nil {
+			return nil, err
+		}
+		return ir.SubExpr{Left: left, Right: right}, nil
 	case *parser.DottedPath:
 		return c.resolvePathExpr(v, sc)
 	default:
 		return nil, fmt.Errorf("compiler: unhandled expr type %T", e)
 	}
+}
+
+// compileProgressExpr compiles an expr appearing inside a `progress`
+// block. It differs from compileExpr only in how it resolves a
+// dottedPath: `<label>.<field>` reads the *logged* value for that set
+// (LogExpr), not the prescribed target/load substitution
+// resolvePathExpr performs — see spec/semantics/progression.md §2 and
+// targets-loads.md §4's note. Arithmetic and literals compile
+// identically either way.
+func (c *compiler) compileProgressExpr(e parser.Expr, sc *scope) (ir.Expr, error) {
+	switch v := e.(type) {
+	case *parser.NumberLit:
+		return ir.NumberExpr{Value: v.Value}, nil
+	case *parser.CatalogFieldRef:
+		return ir.CatalogFieldExpr{Catalog: v.Catalog, Field: v.Field}, nil
+	case *parser.MulExpr:
+		left, right, err := c.compileBinOperands(v.Left, v.Right, sc, c.compileProgressExpr)
+		if err != nil {
+			return nil, err
+		}
+		return ir.MulExpr{Left: left, Right: right}, nil
+	case *parser.DivExpr:
+		left, right, err := c.compileBinOperands(v.Left, v.Right, sc, c.compileProgressExpr)
+		if err != nil {
+			return nil, err
+		}
+		return ir.DivExpr{Left: left, Right: right}, nil
+	case *parser.AddExpr:
+		left, right, err := c.compileBinOperands(v.Left, v.Right, sc, c.compileProgressExpr)
+		if err != nil {
+			return nil, err
+		}
+		return ir.AddExpr{Left: left, Right: right}, nil
+	case *parser.SubExpr:
+		left, right, err := c.compileBinOperands(v.Left, v.Right, sc, c.compileProgressExpr)
+		if err != nil {
+			return nil, err
+		}
+		return ir.SubExpr{Left: left, Right: right}, nil
+	case *parser.DottedPath:
+		return c.resolveProgressPathExpr(v, sc)
+	default:
+		return nil, fmt.Errorf("compiler: unhandled expr type %T", e)
+	}
+}
+
+func (c *compiler) compileBinOperands(l, r parser.Expr, sc *scope, compileE exprCompiler) (ir.Expr, ir.Expr, error) {
+	left, err := compileE(l, sc)
+	if err != nil {
+		return nil, nil, err
+	}
+	right, err := compileE(r, sc)
+	if err != nil {
+		return nil, nil, err
+	}
+	return left, right, nil
+}
+
+// resolveProgressPathExpr is resolvePathExpr's counterpart for a
+// progress block: `<label>.<field>` (bare, or dropset-qualified
+// `<dropset>.<label>.<field>`) reads what was logged for that set —
+// LogExpr — rather than substituting its prescribed formula. A bare
+// state path still means the current state value, unchanged from
+// resolvePathExpr.
+func (c *compiler) resolveProgressPathExpr(dp *parser.DottedPath, sc *scope) (ir.Expr, error) {
+	segs := dp.Segments
+	full := strings.Join(segs, ".")
+	head := segs[0]
+
+	if sc.lookupSet(head) != nil {
+		if len(segs) != 2 {
+			return nil, fmt.Errorf("%s: %q: expected '<label>.<field>' inside a progress block", dp.Pos, full)
+		}
+		return ir.LogExpr{Label: head, Field: segs[1]}, nil
+	}
+	if d := sc.lookupDropset(head); d != nil {
+		if len(segs) != 3 {
+			return nil, fmt.Errorf("%s: %q: expected '<dropset>.<label>.<field>' inside a progress block", dp.Pos, full)
+		}
+		if _, ok := d.byLabel[segs[1]]; !ok {
+			return nil, fmt.Errorf("%s: dropset %q has no set labeled %q", dp.Pos, head, segs[1])
+		}
+		return ir.LogExpr{Label: segs[1], Field: segs[2]}, nil
+	}
+	if c.stateRoots[head] {
+		return ir.PathExpr{Path: full}, nil
+	}
+	return nil, fmt.Errorf("%s: dotted path %q does not resolve to a set label, dropset, or state binding", dp.Pos, full)
 }
 
 // resolvePathExpr classifies a dottedPath by scope lookup, per
@@ -78,37 +180,6 @@ func loadExprOf(ref *ir.SetRef, full string) (ir.Expr, error) {
 		return nil, fmt.Errorf("local set reference %q: set has no load to reference", full)
 	}
 	return wl.Expr, nil
-}
-
-// resolveLabelRef resolves a progressDecl's first argument — a bare set
-// label or a dropset-qualified `ds.label` — to both the *ir.SetRef it
-// names (so a progression rule can attach to it) and the plain label
-// string ProgressionRule.Target stores. This is a different resolution
-// than resolvePathExpr: the result is a name/reference, not a value
-// expression.
-func resolveLabelRef(dp *parser.DottedPath, sc *scope) (*ir.SetRef, string, error) {
-	segs := dp.Segments
-	full := strings.Join(segs, ".")
-	switch len(segs) {
-	case 1:
-		ref := sc.lookupSet(segs[0])
-		if ref == nil {
-			return nil, "", fmt.Errorf("%s: progress target %q: no such set in scope", dp.Pos, full)
-		}
-		return ref, segs[0], nil
-	case 2:
-		d := sc.lookupDropset(segs[0])
-		if d == nil {
-			return nil, "", fmt.Errorf("%s: progress target %q: %q is not an in-scope dropset", dp.Pos, full, segs[0])
-		}
-		ref, ok := d.byLabel[segs[1]]
-		if !ok {
-			return nil, "", fmt.Errorf("%s: progress target %q: dropset %q has no set labeled %q", dp.Pos, full, segs[0], segs[1])
-		}
-		return ref, segs[1], nil
-	default:
-		return nil, "", fmt.Errorf("%s: progress target %q: expected a set label or dropset-qualified label", dp.Pos, full)
-	}
 }
 
 // quantityUnitKind classifies a literal unit suffix (grammar's `unit`

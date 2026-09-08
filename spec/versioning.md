@@ -26,9 +26,9 @@ reaches `1.0`:
 - **Patch**: clarifications that don't change what any existing `.owl`
   program compiles to (e.g. fixing an ambiguous grammar comment).
 - **Minor**: additive, backward-compatible changes — a new group
-  construct, a new stdlib scheme, a new `Target`/`Load` variant — that
-  don't change the compiled output of any program valid under the
-  previous minor version.
+  construct, a new `Expr`/`BoolExpr` operator, a new `Target`/`Load`
+  variant — that don't change the compiled output of any program valid
+  under the previous minor version.
 - **Major**: anything that changes what an existing valid `.owl` program
   compiles to, or removes/renames a canonical-form field.
 

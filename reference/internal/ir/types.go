@@ -38,7 +38,8 @@ type Fallback struct {
 }
 
 // Expr is the recursive arithmetic expression node. Concrete
-// implementations: NumberExpr, PathExpr, CatalogFieldExpr, MulExpr.
+// implementations: NumberExpr, PathExpr, CatalogFieldExpr, MulExpr,
+// AddExpr, SubExpr, DivExpr, LogExpr.
 type Expr interface{ isExpr() }
 
 type NumberExpr struct{ Value float64 }
@@ -49,11 +50,25 @@ type PathExpr struct{ Path string }
 type CatalogFieldExpr struct{ Catalog, Field string }
 
 type MulExpr struct{ Left, Right Expr }
+type AddExpr struct{ Left, Right Expr }
+type SubExpr struct{ Left, Right Expr }
+type DivExpr struct{ Left, Right Expr }
+
+// LogExpr reads what was actually logged for a set this session — e.g.
+// surface `top_set.reps` inside a `progress` block. Label is the set's
+// own label (already resolved away from any dropset-qualified source
+// spelling — see spec/semantics/progression.md §2). Never appears
+// outside a ProgressionBody.
+type LogExpr struct{ Label, Field string }
 
 func (NumberExpr) isExpr()       {}
 func (PathExpr) isExpr()         {}
 func (CatalogFieldExpr) isExpr() {}
 func (MulExpr) isExpr()          {}
+func (AddExpr) isExpr()          {}
+func (SubExpr) isExpr()          {}
+func (DivExpr) isExpr()          {}
+func (LogExpr) isExpr()          {}
 
 // Target is what the athlete is asked to do (spec/semantics/targets-loads.md
 // §1). Concrete implementations: RepsTarget, DistanceTarget, DurationTarget.
@@ -93,49 +108,61 @@ type WeightLoad struct {
 
 func (WeightLoad) isLoad() {}
 
-// ProgressionRule is a `progress = scheme(target, ...args)` line
-// (spec/semantics/progression.md, spec/stdlib/schemes.md).
-type ProgressionRule struct {
-	Scheme string    `json:"scheme"`
-	Target string    `json:"target"` // label of the SetRef this rule progresses
-	Args   []float64 `json:"args,omitempty"`
-}
-
-func (ProgressionRule) isProgression() {}
-
 // BoolExpr is the condition of an `if`/`then`/`else` (grammar's
-// `condExpr`). See spec/semantics/conditionals.md §2.
-type BoolExpr struct {
+// `condExpr`) — a relational comparison, or two conditions combined with
+// `and`/`or`. Shared verbatim by Conditional.Cond and ProgressionIf.Cond
+// (spec/semantics/conditionals.md §2, §2a). Concrete implementations:
+// Comparison, AndExpr, OrExpr.
+type BoolExpr interface{ isBoolExpr() }
+
+type Comparison struct {
 	Op    string // "<" | ">" | "<=" | ">=" | "==" | "!="
 	Left  Expr
 	Right Expr
 }
 
-// ProgressionOrConditional is a SetRef's `progression` field: either a
-// plain ProgressionRule, or a Conditional<ProgressionRule> when the
-// source used `if cond then progress = ... else progress = ...`. Both
-// branches are compiled and kept — resolve, not structural compilation,
-// picks one, since `cond` reads per-athlete state. See
-// spec/semantics/conditionals.md §2.
-type ProgressionOrConditional interface{ isProgression() }
+type AndExpr struct{ Left, Right BoolExpr }
+type OrExpr struct{ Left, Right BoolExpr }
 
-// ConditionalProgression is the compiled shape of a `progressDecl`-level
-// conditional (spec/semantics/conditionals.md §2).
-type ConditionalProgression struct {
-	Cond BoolExpr
-	Then ProgressionRule
-	Else ProgressionRule
+func (Comparison) isBoolExpr() {}
+func (AndExpr) isBoolExpr()    {}
+func (OrExpr) isBoolExpr()     {}
+
+// ProgressionBody is an exercise's `progress = { ... }` block — at most
+// one per ExerciseDecl. See spec/semantics/progression.md.
+type ProgressionBody struct {
+	Stmts []ProgressionStmt
 }
 
-func (ConditionalProgression) isProgression() {}
+// ProgressionStmt is one progressBody statement. Concrete
+// implementations: Assign, ProgressionIf.
+type ProgressionStmt interface{ isProgressionStmt() }
+
+// Assign is `<state path> = <expr>` inside a progress block.
+type Assign struct {
+	Path string
+	Expr Expr
+}
+
+// ProgressionIf is progress's own if/then/else — evaluated directly by
+// progress() against the session log and current state, never deferred
+// the way Conditional is. Else may be nil: the only place in the
+// language `else` is optional (spec/semantics/progression.md §2).
+type ProgressionIf struct {
+	Cond BoolExpr
+	Then []ProgressionStmt
+	Else []ProgressionStmt
+}
+
+func (Assign) isProgressionStmt()        {}
+func (ProgressionIf) isProgressionStmt() {}
 
 // SetRef is one `set` line, or an anonymous inline `$Catalog(...)` call.
 type SetRef struct {
-	Label       string // absent for anonymous/inline sets (surface `_`)
-	Exercise    string // catalog name, e.g. "BarbellBackSquat"
-	Target      Target
-	Load        Load // nil for a target-only set (e.g. a cardio distance)
-	Progression ProgressionOrConditional
+	Label    string // absent for anonymous/inline sets (surface `_`)
+	Exercise string // catalog name, e.g. "BarbellBackSquat"
+	Target   Target
+	Load     Load // nil for a target-only set (e.g. a cardio distance)
 }
 
 // Ref is a bare-name invocation (grammar `ref ::= IDENT`) — resolved
@@ -228,6 +255,9 @@ type ExerciseDecl struct {
 	// §3.8), mirroring Day.Groups for `partA`-style assignments.
 	Groups []NamedGroup `json:"groups,omitempty"`
 	Body   Group        `json:"body"` // this declaration's own straight-set Group
+	// Progress is this exercise's progression code, at most one per
+	// exercise. See spec/semantics/progression.md.
+	Progress *ProgressionBody `json:"progress,omitempty"`
 }
 
 // NamedGroup is a `partA = <groupExpr>` assignment.

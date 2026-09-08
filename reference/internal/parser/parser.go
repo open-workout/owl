@@ -441,32 +441,102 @@ func (p *parser) parseProgressDecl() (*ProgressDecl, error) {
 	if _, err := p.expect(lexer.ASSIGN); err != nil {
 		return nil, err
 	}
-	scheme, err := p.expect(lexer.IDENT)
+	body, err := p.parseProgressBody()
 	if err != nil {
 		return nil, err
 	}
-	if _, err := p.expect(lexer.LPAREN); err != nil {
+	return &ProgressDecl{Body: body, Pos: pos}, nil
+}
+
+// parseProgressBody parses grammar's `progressBody ::= '{' progressStmt*
+// '}'`.
+func (p *parser) parseProgressBody() ([]any, error) {
+	if _, err := p.expect(lexer.LBRACE); err != nil {
 		return nil, err
 	}
-	var args []Expr
-	if !p.at(lexer.RPAREN) {
-		for {
-			e, err := p.parseExpr()
+	stmts, err := p.parseProgressStmts(lexer.RBRACE)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := p.expect(lexer.RBRACE); err != nil {
+		return nil, err
+	}
+	return stmts, nil
+}
+
+// parseProgressStmts parses a progressStmt* list, stopping at `stop`
+// (RBRACE for a progressBody, or ELSE/RBRACE for a progressIf branch —
+// see grammar's note that a branch runs "until 'else' or the enclosing
+// '}'").
+func (p *parser) parseProgressStmts(stop lexer.Kind) ([]any, error) {
+	var stmts []any
+	for !p.at(stop) && !p.at(lexer.ELSE) {
+		s, err := p.parseProgressStmt()
+		if err != nil {
+			return nil, err
+		}
+		stmts = append(stmts, s)
+		p.skipOptSemi()
+	}
+	return stmts, nil
+}
+
+func (p *parser) parseProgressStmt() (any, error) {
+	if p.at(lexer.IF) {
+		return p.parseProgressIf()
+	}
+	return p.parseProgressAssign()
+}
+
+func (p *parser) parseProgressAssign() (*ProgressAssign, error) {
+	pos := p.cur().Pos
+	path, err := p.parseDottedPath()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := p.expect(lexer.ASSIGN); err != nil {
+		return nil, err
+	}
+	e, err := p.parseExpr()
+	if err != nil {
+		return nil, err
+	}
+	return &ProgressAssign{Path: *path, Expr: e, Pos: pos}, nil
+}
+
+func (p *parser) parseProgressIf() (*ProgressIf, error) {
+	pos := p.cur().Pos
+	p.advance() // 'if'
+	cond, err := p.parseCond()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := p.expect(lexer.THEN); err != nil {
+		return nil, err
+	}
+	p.skipOptColon()
+	then, err := p.parseProgressStmts(lexer.RBRACE)
+	if err != nil {
+		return nil, err
+	}
+	pi := &ProgressIf{Cond: cond, Then: then, Pos: pos}
+	if p.at(lexer.ELSE) {
+		p.advance()
+		if p.at(lexer.IF) {
+			nested, err := p.parseProgressIf()
 			if err != nil {
 				return nil, err
 			}
-			args = append(args, e)
-			if p.at(lexer.COMMA) {
-				p.advance()
-				continue
-			}
-			break
+			pi.Else = []any{nested}
+			return pi, nil
 		}
+		els, err := p.parseProgressStmts(lexer.RBRACE)
+		if err != nil {
+			return nil, err
+		}
+		pi.Else = els
 	}
-	if _, err := p.expect(lexer.RPAREN); err != nil {
-		return nil, err
-	}
-	return &ProgressDecl{Scheme: scheme.Lit, Args: args, Pos: pos}, nil
+	return pi, nil
 }
 
 func (p *parser) parseDropsetDecl() (*DropsetDecl, error) {
@@ -529,21 +599,73 @@ var relOps = map[lexer.Kind]string{
 	lexer.LT: "<", lexer.GT: ">", lexer.LE: "<=", lexer.GE: ">=", lexer.EQ: "==", lexer.NE: "!=",
 }
 
+// parseCond implements condExpr ::= condOr, condOr ::= condAnd ('or'
+// condAnd)*, condAnd ::= condAtom ('and' condAtom)* — 'and' binds
+// tighter than 'or'.
 func (p *parser) parseCond() (Cond, error) {
+	return p.parseCondOr()
+}
+
+func (p *parser) parseCondOr() (Cond, error) {
+	left, err := p.parseCondAnd()
+	if err != nil {
+		return nil, err
+	}
+	for p.at(lexer.OR) {
+		p.advance()
+		right, err := p.parseCondAnd()
+		if err != nil {
+			return nil, err
+		}
+		left = &OrCond{Left: left, Right: right}
+	}
+	return left, nil
+}
+
+func (p *parser) parseCondAnd() (Cond, error) {
+	left, err := p.parseCondAtom()
+	if err != nil {
+		return nil, err
+	}
+	for p.at(lexer.AND) {
+		p.advance()
+		right, err := p.parseCondAtom()
+		if err != nil {
+			return nil, err
+		}
+		left = &AndCond{Left: left, Right: right}
+	}
+	return left, nil
+}
+
+// parseCondAtom implements condAtom ::= expr relOp expr | '(' condExpr
+// ')'.
+func (p *parser) parseCondAtom() (Cond, error) {
+	if p.at(lexer.LPAREN) {
+		p.advance()
+		c, err := p.parseCond()
+		if err != nil {
+			return nil, err
+		}
+		if _, err := p.expect(lexer.RPAREN); err != nil {
+			return nil, err
+		}
+		return c, nil
+	}
 	left, err := p.parseExpr()
 	if err != nil {
-		return Cond{}, err
+		return nil, err
 	}
 	op, ok := relOps[p.kind()]
 	if !ok {
-		return Cond{}, p.errf("expected a relational operator, got %v", p.kind())
+		return nil, p.errf("expected a relational operator, got %v", p.kind())
 	}
 	p.advance()
 	right, err := p.parseExpr()
 	if err != nil {
-		return Cond{}, err
+		return nil, err
 	}
-	return Cond{Op: op, Left: left, Right: right}, nil
+	return &Comparison{Op: op, Left: left, Right: right}, nil
 }
 
 // ---- statements ----
@@ -886,20 +1008,49 @@ func (p *parser) parseQuantity() (Quantity, error) {
 	return Quantity{Value: v, Plus: plus}, nil
 }
 
-func (p *parser) parseExpr() (Expr, error) { return p.parseTerm() }
+// parseExpr implements expr ::= term (('+'|'-') term)* — note
+// parseQuantity calls parseTerm directly, not this, so quantity's
+// postfix '+' marker (`tm.squat.reps+`) never collides with this binary
+// '+' (see grammar.ebnf's note under `quantity`).
+func (p *parser) parseExpr() (Expr, error) {
+	left, err := p.parseTerm()
+	if err != nil {
+		return nil, err
+	}
+	for p.at(lexer.PLUS) || p.at(lexer.MINUS) {
+		isAdd := p.at(lexer.PLUS)
+		p.advance()
+		right, err := p.parseTerm()
+		if err != nil {
+			return nil, err
+		}
+		if isAdd {
+			left = &AddExpr{Left: left, Right: right}
+		} else {
+			left = &SubExpr{Left: left, Right: right}
+		}
+	}
+	return left, nil
+}
 
+// parseTerm implements term ::= factor (('*'|'/') factor)*.
 func (p *parser) parseTerm() (Expr, error) {
 	left, err := p.parseFactor()
 	if err != nil {
 		return nil, err
 	}
-	for p.at(lexer.STAR) {
+	for p.at(lexer.STAR) || p.at(lexer.SLASH) {
+		isMul := p.at(lexer.STAR)
 		p.advance()
 		right, err := p.parseFactor()
 		if err != nil {
 			return nil, err
 		}
-		left = &MulExpr{Left: left, Right: right}
+		if isMul {
+			left = &MulExpr{Left: left, Right: right}
+		} else {
+			left = &DivExpr{Left: left, Right: right}
+		}
 	}
 	return left, nil
 }

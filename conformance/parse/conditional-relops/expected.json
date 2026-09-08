@@ -85,6 +85,7 @@
               {
                 "type": "conditional",
                 "cond": {
+                  "type": "comparison",
                   "op": "<=",
                   "left": { "type": "path", "path": "tm.a" },
                   "right": { "type": "number", "value": 5 }
@@ -95,6 +96,7 @@
               {
                 "type": "conditional",
                 "cond": {
+                  "type": "comparison",
                   "op": ">=",
                   "left": { "type": "path", "path": "tm.b" },
                   "right": { "type": "number", "value": 5 }
@@ -105,6 +107,7 @@
               {
                 "type": "conditional",
                 "cond": {
+                  "type": "comparison",
                   "op": "==",
                   "left": { "type": "path", "path": "tm.c" },
                   "right": { "type": "number", "value": 1 }

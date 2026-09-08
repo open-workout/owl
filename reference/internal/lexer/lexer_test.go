@@ -37,6 +37,22 @@ func assertKindAt(t *testing.T, toks []Token, i int, want Kind) {
 	}
 }
 
+func TestArithmeticAndBooleanTokens(t *testing.T) {
+	toks, err := Lex("weight - 5 / 2 and reps or true")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Kind{IDENT, MINUS, NUMBER, SLASH, NUMBER, AND, IDENT, OR, IDENT, EOF}
+	if len(toks) != len(want) {
+		t.Fatalf("got %d tokens, want %d", len(toks), len(want))
+	}
+	for i, k := range want {
+		if toks[i].Kind != k {
+			t.Fatalf("token %d: got %v, want %v", i, toks[i].Kind, k)
+		}
+	}
+}
+
 func TestCatalogNameRequiresNoGap(t *testing.T) {
 	if _, err := Lex("$ Foo"); err == nil {
 		t.Fatal("expected an error for '$' followed by whitespace")

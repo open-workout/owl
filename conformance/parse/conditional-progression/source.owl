@@ -8,9 +8,12 @@ block main = {
     day day1 = {
         exercise squat = $BarbellBackSquat {
             set top_set = 5 @ tm.squat.weight
-            if tm.squat.weight > 150 then
-                progress = double(top_set,8,12,2.5)
-            else progress = double(top_set,8,12,5)
+            progress = {
+                if top_set.reps >= 12 then
+                    tm.squat.weight = tm.squat.weight + 5
+                else
+                    tm.squat.weight = tm.squat.weight + 2.5
+            }
         }
         squat;
     }

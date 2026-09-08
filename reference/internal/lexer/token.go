@@ -36,6 +36,8 @@ const (
 	FOR_TIME
 	ROUNDS
 	AS
+	AND
+	OR
 
 	// Punctuation / operators.
 	ASSIGN // '='
@@ -49,8 +51,10 @@ const (
 	SEMI
 	DOT
 	STAR
+	SLASH
 	AT
 	PLUS
+	MINUS
 	LT
 	GT
 	LE
@@ -84,6 +88,8 @@ var keywords = map[string]Kind{
 	"for_time": FOR_TIME,
 	"rounds":   ROUNDS,
 	"as":       AS,
+	"and":      AND,
+	"or":       OR,
 }
 
 var kindNames = map[Kind]string{
@@ -91,7 +97,7 @@ var kindNames = map[Kind]string{
 	CATALOG_NAME: "CATALOG_NAME",
 	ASSIGN:       "'='", LBRACE: "'{'", RBRACE: "'}'", LPAREN: "'('", RPAREN: "')'",
 	LBRACKET: "'['", RBRACKET: "']'", COMMA: "','", SEMI: "';'", DOT: "'.'",
-	STAR: "'*'", AT: "'@'", PLUS: "'+'",
+	STAR: "'*'", SLASH: "'/'", AT: "'@'", PLUS: "'+'", MINUS: "'-'",
 	LT: "'<'", GT: "'>'", LE: "'<='", GE: "'>='", EQ: "'=='", NE: "'!='",
 	PIPE: "'|'", COLON: "':'",
 }
