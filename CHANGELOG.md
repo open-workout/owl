@@ -28,6 +28,20 @@ patch/minor/major change once the spec reaches `1.0`; everything below
   parse/resolve/progress, and three full real programs under
   `conformance/programs/` (`squat-everyday`, `superset-example`,
   `complicated-crossfit`).
+- `if`/`then`/`else` conditionals (`spec/grammar.ebnf`'s `cond*Item`
+  family) at the `exerciseItem` (sets/progress), `dayItem` (exercises),
+  `blockItem` (days), and `topLevelItem` (blocks) levels, backed by four
+  `conformance/programs/` examples (`if-then-else`,
+  `if-then-else-for-progress`, `if-then-else-for-days`,
+  `if-then-else-for-blocks`). Compiles to a new `Conditional<T>` IR node
+  (`spec/semantics/conditionals.md`, `canonical-form.schema.json`'s
+  `conditionalMember`/`conditionalProgression`) whose branch is picked by
+  `resolve`, not structural compilation, since `cond` reads `state` —
+  see `conformance/parse/conditional-exercise-choice/`,
+  `conformance/parse/conditional-progression/`, and
+  `conformance/resolve/conditional-progress-else-branch/`.
+- `relOp` now covers `<=`, `>=`, and `==` in addition to `<`/`>`, backed
+  by `conformance/parse/conditional-relops/`.
 
 ### Open questions (tracked in the spec, not yet resolved)
 - `dropset`/`restpause` surface syntax (`spec/semantics/groups.md` §5).
@@ -35,3 +49,5 @@ patch/minor/major change once the spec reaches `1.0`; everything below
   (`spec/semantics/groups.md` §5).
 - Whether `state` and `stats` should stay synonyms or become distinct
   concepts (`spec/semantics/parameters.md` §1).
+- `!=`, a `setDecl` conditional branch, `else`-less conditionals, and
+  `else if` chaining (`spec/semantics/conditionals.md` §4).

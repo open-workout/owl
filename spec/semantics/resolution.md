@@ -27,8 +27,14 @@ resolve(program: CanonicalProgram, state: State) -> Session
 
 ## 2. What resolution does
 
-Walk the selected subtree and, for every `Expr` node encountered inside a
-`target` or `load` (see [`targets-loads.md`](./targets-loads.md)):
+Walk the selected subtree. Wherever a `Conditional` node is encountered (a
+`members` entry, or a `SetRef.progression` value) — see
+[`conditionals.md`](./conditionals.md) — resolve its `cond`'s two `Expr`s
+using the same steps below, evaluate the comparison, and replace the
+`Conditional` with whichever of `then`/`else` it picks, recursively
+resolved the same way; the branch not taken is dropped and never appears
+in the output. For every other `Expr` node encountered inside a `target`
+or `load` (see [`targets-loads.md`](./targets-loads.md)):
 
 1. **Catalog field reference** (`$Exercise.field`, e.g.
    `$BarbellBackSquat.e1rm`) — look up this athlete's most recent recorded

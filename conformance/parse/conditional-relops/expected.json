@@ -1,0 +1,132 @@
+{
+  "owlVersion": "0.1.0",
+  "units": "kg",
+  "plates": [25, 20, 15, 10, 5, 2.5, 1.25],
+  "state": [
+    { "path": "tm.a", "expr": { "type": "number", "value": 5 } },
+    { "path": "tm.b", "expr": { "type": "number", "value": 5 } },
+    { "path": "tm.c", "expr": { "type": "number", "value": 1 } }
+  ],
+  "blocks": [
+    {
+      "name": "main",
+      "days": [
+        {
+          "name": "day1",
+          "exercises": [
+            {
+              "name": "x",
+              "catalog": "BarbellBackSquat",
+              "sets": [
+                {
+                  "type": "setRef",
+                  "exercise": "BarbellBackSquat",
+                  "target": { "kind": "reps", "expr": { "type": "number", "value": 5 } },
+                  "load": { "kind": "weight", "expr": { "type": "number", "value": 100 }, "unit": "kg" }
+                }
+              ],
+              "groups": [],
+              "body": {
+                "type": "group",
+                "kind": "straight",
+                "interleave": "sequential",
+                "rest": { "mode": "single" },
+                "termination": { "mode": "count", "n": 1 },
+                "atomic": false,
+                "members": [
+                  {
+                    "type": "setRef",
+                    "exercise": "BarbellBackSquat",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 5 } },
+                    "load": { "kind": "weight", "expr": { "type": "number", "value": 100 }, "unit": "kg" }
+                  }
+                ]
+              }
+            },
+            {
+              "name": "y",
+              "catalog": "BarbellBenchPress",
+              "sets": [
+                {
+                  "type": "setRef",
+                  "exercise": "BarbellBenchPress",
+                  "target": { "kind": "reps", "expr": { "type": "number", "value": 5 } },
+                  "load": { "kind": "weight", "expr": { "type": "number", "value": 60 }, "unit": "kg" }
+                }
+              ],
+              "groups": [],
+              "body": {
+                "type": "group",
+                "kind": "straight",
+                "interleave": "sequential",
+                "rest": { "mode": "single" },
+                "termination": { "mode": "count", "n": 1 },
+                "atomic": false,
+                "members": [
+                  {
+                    "type": "setRef",
+                    "exercise": "BarbellBenchPress",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 5 } },
+                    "load": { "kind": "weight", "expr": { "type": "number", "value": 60 }, "unit": "kg" }
+                  }
+                ]
+              }
+            }
+          ],
+          "groups": [],
+          "body": {
+            "type": "group",
+            "kind": "straight",
+            "interleave": "sequential",
+            "rest": { "mode": "single" },
+            "termination": { "mode": "count", "n": 3 },
+            "atomic": false,
+            "members": [
+              {
+                "type": "conditional",
+                "cond": {
+                  "op": "<=",
+                  "left": { "type": "path", "path": "tm.a" },
+                  "right": { "type": "number", "value": 5 }
+                },
+                "then": { "type": "ref", "name": "x" },
+                "else": { "type": "ref", "name": "y" }
+              },
+              {
+                "type": "conditional",
+                "cond": {
+                  "op": ">=",
+                  "left": { "type": "path", "path": "tm.b" },
+                  "right": { "type": "number", "value": 5 }
+                },
+                "then": { "type": "ref", "name": "y" },
+                "else": { "type": "ref", "name": "x" }
+              },
+              {
+                "type": "conditional",
+                "cond": {
+                  "op": "==",
+                  "left": { "type": "path", "path": "tm.c" },
+                  "right": { "type": "number", "value": 1 }
+                },
+                "then": { "type": "ref", "name": "x" },
+                "else": { "type": "ref", "name": "y" }
+              }
+            ]
+          }
+        }
+      ],
+      "body": {
+        "type": "group",
+        "kind": "straight",
+        "interleave": "sequential",
+        "rest": { "mode": "single" },
+        "termination": { "mode": "count", "n": 1 },
+        "atomic": false,
+        "members": [
+          { "type": "ref", "name": "day1" }
+        ]
+      }
+    }
+  ]
+}

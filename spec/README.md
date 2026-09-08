@@ -18,6 +18,9 @@ If you're new to OWL, read in this order:
      superset/circuit/EMOM/AMRAP/for-time construct reduces to.
    - [`targets-loads.md`](./semantics/targets-loads.md) — what a `set`
      line's two `quantity` slots actually mean.
+   - [`conditionals.md`](./semantics/conditionals.md) — `if`/`then`/
+     `else`, the one construct whose branch isn't picked until
+     `resolve`.
    - [`parameters.md`](./semantics/parameters.md) — the `state`
      namespace, the single-owner rule, onboarding sentinels (`AMW`).
    - [`resolution.md`](./semantics/resolution.md) — turning a compiled

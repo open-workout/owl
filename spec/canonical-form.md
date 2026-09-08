@@ -27,7 +27,7 @@ ExerciseDecl { name, catalog, sets: SetRef[], groups: NamedGroup[], body: Group 
 NamedGroup   { name, group: Group }            // one `partA = <groupExpr>` assignment
 
 Group { kind, members: Member[], interleave, rest, termination, atomic }
-Member = SetRef | Ref | Group                  // groups nest
+Member = SetRef | Ref | Group | Conditional<Member>   // groups nest
 Ref    { name }                                // a bare-name use: exercise, named
                                                 // group, day, or block — resolved
                                                 // against the enclosing declarations
@@ -35,6 +35,10 @@ Ref    { name }                                // a bare-name use: exercise, nam
 SetRef { exercise, target, load?, progression? }
 Target = Reps | Distance | Duration           // what to do
 Load   = Weight                               // what to do it against
+progression: ProgressionRule | Conditional<ProgressionRule>
+
+Conditional<T> { cond: BoolExpr, then: T, else: T }   // `if cond then: A else B`;
+                                                       // see semantics/conditionals.md
 ```
 
 A `Block`/`Day`'s `body` is always present, even when the source has no
@@ -59,7 +63,10 @@ is athlete-agnostic: the same canonical document works for every athlete
 running the program. It is *not* the final, ready-to-perform workout: any
 `target`/`load` whose `expr` is a dotted `state` path or a
 `$Catalog.field` reference is left unresolved, along with its `fallback`
-if it has one.
+if it has one. `Conditional` is the one construct compilation does *not*
+expand — its `cond` reads `state`, so both `then`/`else` branches are kept
+as-is and `resolve` (not structural compilation) picks between them; see
+[`semantics/conditionals.md`](./semantics/conditionals.md).
 
 Turning one canonical document into a concrete, numbers-filled-in workout
 for one athlete on one day is [`resolve`](./semantics/resolution.md)'s
@@ -70,6 +77,9 @@ job — a separate, per-athlete pass. See:
   `Group` shape above.
 - [`semantics/targets-loads.md`](./semantics/targets-loads.md) — the
   `Target`/`Load` unions.
+- [`semantics/conditionals.md`](./semantics/conditionals.md) — `if`/
+  `then`/`else`, the `Conditional` shape above, and why it's resolved at
+  `resolve` time rather than compile time.
 - [`semantics/resolution.md`](./semantics/resolution.md) — `resolve`.
 - [`semantics/progression.md`](./semantics/progression.md) and
   [`stdlib/schemes.md`](./stdlib/schemes.md) — how a logged session flows
