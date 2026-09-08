@@ -212,6 +212,26 @@ atomic: false, members: [copy of `leader`'s compiled body] × 5 }`. Same
 repetition-macro treatment as `rounds`, just with a fixed body instead of a
 per-lap substitution.
 
+### 3.7a `(stmt, stmt, …)*N` → repeated sequential Group, anonymous body
+
+```owl
+(cardio_rower, rest(2min))*5
+```
+
+Same macro as §3.7, just with an inline, anonymous statement list in
+place of a declared name — there is nothing to name when the body is
+only ever used at this one repeat site. Compiles to `Group{ interleave:
+sequential, rest: {single}, termination: count(5), atomic: false,
+members: [copy of the compiled `(cardio_rower, rest(2min))` body] × 5 }`,
+where the inner body is compiled exactly as any other statement list
+(§3.1-style): `cardio_rower` → `Ref{name: "cardio_rower"}`, and the bare
+`rest(2min)` — since it's not a `supersetArg`'s per-pair rest override
+(§3.2) — sets that inner Group's own `rest` to `{single: 2min}` rather
+than becoming a member of its own. The same bare-`rest(d)`-sets-the-
+enclosing-group's-`rest` reading applies wherever a `restStmt` appears
+directly in a sequential statement list, e.g. `SE_lower; rest(1d);
+SE_upper;` at block level.
+
 ### 3.8 `dropset` declaration → `dropset` Group
 
 ```owl

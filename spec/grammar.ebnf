@@ -116,7 +116,15 @@ stmt           ::= assignStmt
                  | ref
 
 assignStmt     ::= IDENT '=' groupExpr
-repeatStmt     ::= ref '*' NUMBER
+
+(* A repeatable is either a bare declared name (§3.7 of groups.md: `N`
+   copies of that name's own compiled body) or an inline, anonymous
+   statement list (the same repetition, just with nothing declared to
+   name) — e.g. `(cardio_rower, rest(2min))*5`. *)
+repeatStmt     ::= repeatable '*' NUMBER
+repeatable     ::= ref
+                 | '(' stmt ( ',' stmt )* ')'
+
 restStmt       ::= 'rest' '(' duration ')'
 ref            ::= IDENT
 
@@ -209,6 +217,10 @@ catalogFieldRef::= CATALOG_NAME '.' IDENT
    `duration` is minutes; 'm' inside a `quantity`'s `unit` is
    meters. The two nonterminals never appear in the same slot. *)
 unit           ::= 'kg' | 'lb' | 'm' | 'km' | 's' | 'min' | 'h' | 'd'
-duration       ::= NUMBER ( 's' | 'm' | 'h' | 'd' )
+duration       ::= NUMBER ( 's' | 'm' | 'min' | 'h' | 'd' )
+   (* 'm' and 'min' are both accepted spellings for minutes here — the
+      same alternate spelling `unit` already offers, for consistency.
+      'm' inside `unit`, by contrast, means meters (see the note above);
+      the two productions are never used in the same slot. *)
 
 argList        ::= expr ( ',' expr )*

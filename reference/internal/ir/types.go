@@ -1,12 +1,11 @@
-// Package owl is the Go reference implementation of the Open Workout
-// Language. This file defines the wire types mirroring
-// ../spec/canonical-form.schema.json — see ../spec/canonical-form.md for
-// the prose version of this same shape.
-//
-// Nothing parses yet: Compile, Resolve, and Progress (see owl.go) are
-// stubs. This file exists so the canonical-form JSON shape has a single,
-// checked Go representation to build the lexer/parser/compiler against.
-package owl
+// Package ir defines the canonical-form wire types mirroring
+// ../../../spec/canonical-form.schema.json — see
+// ../../../spec/canonical-form.md for the prose version of this same
+// shape. It's a leaf package (imports nothing else in this module) so
+// that both internal/compiler (which builds these values) and the
+// public owl package (which re-exports them as type aliases — see
+// ../../types.go) can import it without an import cycle.
+package ir
 
 // Program is the top-level canonical-form document.
 type Program struct {
@@ -102,13 +101,41 @@ type ProgressionRule struct {
 	Args   []float64 `json:"args,omitempty"`
 }
 
+func (ProgressionRule) isProgression() {}
+
+// BoolExpr is the condition of an `if`/`then`/`else` (grammar's
+// `condExpr`). See spec/semantics/conditionals.md §2.
+type BoolExpr struct {
+	Op    string // "<" | ">" | "<=" | ">=" | "==" | "!="
+	Left  Expr
+	Right Expr
+}
+
+// ProgressionOrConditional is a SetRef's `progression` field: either a
+// plain ProgressionRule, or a Conditional<ProgressionRule> when the
+// source used `if cond then progress = ... else progress = ...`. Both
+// branches are compiled and kept — resolve, not structural compilation,
+// picks one, since `cond` reads per-athlete state. See
+// spec/semantics/conditionals.md §2.
+type ProgressionOrConditional interface{ isProgression() }
+
+// ConditionalProgression is the compiled shape of a `progressDecl`-level
+// conditional (spec/semantics/conditionals.md §2).
+type ConditionalProgression struct {
+	Cond BoolExpr
+	Then ProgressionRule
+	Else ProgressionRule
+}
+
+func (ConditionalProgression) isProgression() {}
+
 // SetRef is one `set` line, or an anonymous inline `$Catalog(...)` call.
 type SetRef struct {
 	Label       string // absent for anonymous/inline sets (surface `_`)
 	Exercise    string // catalog name, e.g. "BarbellBackSquat"
 	Target      Target
 	Load        Load // nil for a target-only set (e.g. a cardio distance)
-	Progression *ProgressionRule
+	Progression ProgressionOrConditional
 }
 
 // Ref is a bare-name invocation (grammar `ref ::= IDENT`) — resolved
@@ -118,12 +145,24 @@ type SetRef struct {
 type Ref struct{ Name string }
 
 // Member is one entry in a Group's Members list.
-// Concrete implementations: SetRef, Ref, Group.
+// Concrete implementations: SetRef, Ref, Group, Conditional.
 type Member interface{ isMember() }
 
 func (SetRef) isMember() {}
 func (Ref) isMember()    {}
 func (Group) isMember()  {}
+
+// Conditional is the compiled shape of `if cond then: A else B` when A/B
+// are Members — e.g. a dayItem/blockItem/topLevelItem-level choice
+// between two exercises, groups, or refs. Both branches are compiled and
+// kept; resolve picks one. See spec/semantics/conditionals.md §2.
+type Conditional struct {
+	Cond BoolExpr
+	Then Member
+	Else Member
+}
+
+func (Conditional) isMember() {}
 
 // RestPolicy is the rest at each transition within a Group
 // (spec/semantics/groups.md §1). Concrete implementations: SingleRest,

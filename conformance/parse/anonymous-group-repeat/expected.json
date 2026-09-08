@@ -1,0 +1,103 @@
+{
+  "owlVersion": "0.1.0",
+  "units": "kg",
+  "plates": [25, 20, 15, 10, 5, 2.5, 1.25],
+  "state": [],
+  "blocks": [
+    {
+      "name": "main",
+      "days": [
+        {
+          "name": "day1",
+          "exercises": [
+            {
+              "name": "squat",
+              "catalog": "BarbellBackSquat",
+              "sets": [
+                {
+                  "type": "setRef",
+                  "exercise": "BarbellBackSquat",
+                  "target": { "kind": "reps", "expr": { "type": "number", "value": 5 } },
+                  "load": { "kind": "weight", "expr": { "type": "number", "value": 100 }, "unit": "kg" }
+                }
+              ],
+              "body": {
+                "type": "group",
+                "kind": "straight",
+                "interleave": "sequential",
+                "rest": { "mode": "single" },
+                "termination": { "mode": "count", "n": 1 },
+                "atomic": false,
+                "members": [
+                  {
+                    "type": "setRef",
+                    "exercise": "BarbellBackSquat",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 5 } },
+                    "load": { "kind": "weight", "expr": { "type": "number", "value": 100 }, "unit": "kg" }
+                  }
+                ]
+              }
+            }
+          ],
+          "groups": [],
+          "body": {
+            "type": "group",
+            "kind": "straight",
+            "interleave": "sequential",
+            "rest": { "mode": "single" },
+            "termination": { "mode": "count", "n": 1 },
+            "atomic": false,
+            "members": [
+              {
+                "type": "group",
+                "kind": "straight",
+                "interleave": "sequential",
+                "rest": { "mode": "single" },
+                "termination": { "mode": "count", "n": 3 },
+                "atomic": false,
+                "members": [
+                  {
+                    "type": "group",
+                    "kind": "straight",
+                    "interleave": "sequential",
+                    "rest": { "mode": "single", "duration": { "value": 1, "unit": "m" } },
+                    "termination": { "mode": "count", "n": 1 },
+                    "atomic": false,
+                    "members": [{ "type": "ref", "name": "squat" }]
+                  },
+                  {
+                    "type": "group",
+                    "kind": "straight",
+                    "interleave": "sequential",
+                    "rest": { "mode": "single", "duration": { "value": 1, "unit": "m" } },
+                    "termination": { "mode": "count", "n": 1 },
+                    "atomic": false,
+                    "members": [{ "type": "ref", "name": "squat" }]
+                  },
+                  {
+                    "type": "group",
+                    "kind": "straight",
+                    "interleave": "sequential",
+                    "rest": { "mode": "single", "duration": { "value": 1, "unit": "m" } },
+                    "termination": { "mode": "count", "n": 1 },
+                    "atomic": false,
+                    "members": [{ "type": "ref", "name": "squat" }]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "body": {
+        "type": "group",
+        "kind": "straight",
+        "interleave": "sequential",
+        "rest": { "mode": "single" },
+        "termination": { "mode": "count", "n": 1 },
+        "atomic": false,
+        "members": [{ "type": "ref", "name": "day1" }]
+      }
+    }
+  ]
+}

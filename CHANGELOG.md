@@ -42,6 +42,15 @@ patch/minor/major change once the spec reaches `1.0`; everything below
   `conformance/resolve/conditional-progress-else-branch/`.
 - `relOp` now covers `<=`, `>=`, and `==` in addition to `<`/`>`, backed
   by `conformance/parse/conditional-relops/`.
+- `repeatStmt` now accepts an inline, anonymous statement list —
+  `(A, B, …)*N` — in addition to a bare declared name, so a repeated
+  block doesn't need a name that's never reused elsewhere (`grammar.ebnf`'s
+  new `repeatable` production). Desugars identically to the existing
+  `name*N` rule (`spec/semantics/groups.md` §3.7a) — no canonical-form
+  change. Backed by `conformance/parse/anonymous-group-repeat/`.
+- `duration` now also accepts `min` for minutes (`rest(2min)`), matching
+  the spelling `unit` already offered — previously only bare `m` worked
+  in a `duration` slot.
 
 ### Open questions (tracked in the spec, not yet resolved)
 - `dropset`/`restpause` surface syntax (`spec/semantics/groups.md` §5).

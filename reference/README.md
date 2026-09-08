@@ -25,17 +25,22 @@ and render it — it never runs an OWL parser itself. That's why
 are lower priority than they'd be if the phone had to embed a compiler:
 see those directories' READMEs.
 
-## Package layout (planned)
+## Package layout
 
 ```
 reference/
 ├── go.mod                    module github.com/open-workout/owl/reference
 ├── owl.go                    public API: Compile, Resolve, Progress
+├── types.go                  canonical-form types, re-exported from internal/ir as aliases
+├── compile_test.go           runs Compile against every conformance/parse/* fixture
 ├── internal/
-│   ├── lexer/                 tokenizer for spec/grammar.ebnf
-│   ├── parser/                recursive-descent parser → AST
-│   └── compiler/               AST → canonical-form (desugaring: rounds,
-│                                name*N, exercise/superset/emom/amrap/for_time)
+│   ├── ir/                    canonical-form wire types + JSON codec (leaf package —
+│   │                           see types.go's doc comment for why it's not in package owl)
+│   ├── lexer/                  tokenizer for spec/grammar.ebnf
+│   ├── parser/                 recursive-descent parser → AST
+│   └── compiler/                AST → canonical-form (desugaring: rounds,
+│                                 name*N, exercise/superset/emom/amrap/for_time,
+│                                 conditionals, single-owner-rule validation)
 └── cmd/
     └── owlc/                  CLI: `owlc parse|resolve|progress <file>`,
                                  used locally and by CI to run the
@@ -50,15 +55,19 @@ enough not to need one, and it keeps the toolchain to just Go. That's why
 
 ## Status
 
-`go.mod` and the Go struct types mirroring `canonical-form.schema.json`
-exist (`types.go`, with the JSON codec for its sum-typed fields in
-`codec.go`) — nothing parses OWL source yet. `owl.go`'s `Compile`,
-`Resolve`, `Progress` are stubs; `ParseCanonicalJSON` (decode
-already-compiled JSON into these types) works.
+`Compile` is implemented: lexer → parser → compiler, wired in `owl.go`.
+It passes every `conformance/parse/*` fixture (`compile_test.go`, run as
+part of `go test ./...`) and compiles all of `conformance/programs/*.owl`
+without error. `Resolve` and `Progress` are still stubs (`ErrNotImplemented`)
+— that's the next chunk of work, a separate per-athlete tree-walk over
+the `*Program` `Compile` already produces, not more parsing.
+`ParseCanonicalJSON` (decode already-compiled JSON into these types)
+works, and is what `compile_test.go` uses to turn a fixture's
+`expected.json` into a comparable Go value.
 
-`cmd/owlc` has two real subcommands today: `validate` (round-trip a
-canonical-form JSON file through the Go types) and `validate-fixtures`
+`cmd/owlc` has three real subcommands: `parse` (run `Compile` on a
+`.owl` file and print its canonical form), `validate` (round-trip a
+canonical-form JSON file through the Go types), and `validate-fixtures`
 (walk `../conformance/{parse,resolve,progress}/` and check every fixture
-against its JSON Schema — this is the whole repo's schema-validation
-tooling now; there's no separate Node/npm step). The lexer/parser/
-compiler is the next real chunk of work.
+against its JSON Schema — structural only, not correctness; `go test`
+is what actually exercises `Compile` against the fixtures now).
