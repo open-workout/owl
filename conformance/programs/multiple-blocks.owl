@@ -81,11 +81,11 @@ block leader = {
 
 block pause = {
     day cardio = {
-        exercise cardio_rower = {
-            set _ = 10m
+        exercise cardio_rower = $CardioRowing {
+            set _ = 10min
         }
 
-        (cardio_rower, rest(2m))*5
+        (cardio_rower, rest(2min))*5
     }
 
     (cardio, rest(1d))*3
