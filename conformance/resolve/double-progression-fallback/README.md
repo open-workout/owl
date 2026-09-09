@@ -13,11 +13,14 @@ block main = {
         exercise squat = $BarbellBackSquat {
             set top_set = tm.squat.reps @ tm.squat.weight
             progress = {
-                if top_set.reps >= 12 then
-                    tm.squat.weight = tm.squat.weight + 5
-                    tm.squat.reps = 8
-                else if top_set.reps >= 8 then
-                    tm.squat.reps = tm.squat.reps + 1
+                if top_set.reps >= 8 then
+                    tm.squat.reps = top_set.reps
+                    tm.squat.weight = top_set.weight
+                    if tm.squat.reps >= 12 then
+                        tm.squat.weight += 5
+                        tm.squat.reps = 8
+                    else
+                        tm.squat.reps += 1
             }
         }
         squat;

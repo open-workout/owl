@@ -488,11 +488,34 @@ func (p *parser) parseProgressStmt() (any, error) {
 	return p.parseProgressAssign()
 }
 
+// compoundAssignOps maps each compound-assign token to the binary-expr
+// constructor `path op= expr` desugars into (`path = path op expr`).
+var compoundAssignOps = map[lexer.Kind]func(left, right Expr) Expr{
+	lexer.PLUS_ASSIGN:  func(l, r Expr) Expr { return &AddExpr{Left: l, Right: r} },
+	lexer.MINUS_ASSIGN: func(l, r Expr) Expr { return &SubExpr{Left: l, Right: r} },
+	lexer.STAR_ASSIGN:  func(l, r Expr) Expr { return &MulExpr{Left: l, Right: r} },
+	lexer.SLASH_ASSIGN: func(l, r Expr) Expr { return &DivExpr{Left: l, Right: r} },
+}
+
+// parseProgressAssign implements progressAssign ::= dottedPath assignOp
+// expr. A compound assignOp (+=, -=, *=, /=) desugars here, at parse
+// time, into the same shape plain '=' produces — `path = path op expr`
+// — by synthesizing a DottedPath read of the same path as the binary
+// expr's left operand; see grammar.ebnf's note under progressAssign.
 func (p *parser) parseProgressAssign() (*ProgressAssign, error) {
 	pos := p.cur().Pos
 	path, err := p.parseDottedPath()
 	if err != nil {
 		return nil, err
+	}
+	if combine, ok := compoundAssignOps[p.kind()]; ok {
+		p.advance()
+		rhs, err := p.parseExpr()
+		if err != nil {
+			return nil, err
+		}
+		left := &DottedPath{Segments: path.Segments, Pos: pos}
+		return &ProgressAssign{Path: *path, Expr: combine(left, rhs), Pos: pos}, nil
 	}
 	if _, err := p.expect(lexer.ASSIGN); err != nil {
 		return nil, err

@@ -84,6 +84,19 @@ patch/minor/major change once the spec reaches `1.0`; everything below
   (`spec/semantics/parameters.md` §2) is now checked directly against
   `progress` blocks' `assign` targets rather than inferred from a
   `SetRef`'s target/load expression.
+- `progressAssign` gained compound assignment: `+=`, `-=`, `*=`, `/=`
+  alongside plain `=` (grammar's new `assignOp` production). Pure sugar,
+  desugared at parse time into the existing `path = path op expr` shape
+  so `tm.squat.weight += 5` produces the exact same canonical-form
+  `assign` node `tm.squat.weight = tm.squat.weight + 5` does; no schema
+  change. Scoped to `progressAssign` only (a `state` binding's `=` seeds
+  a value once; a named-group `=` names a group expression; neither has
+  a "current value" to mutate). Every `double`-style `progress` block
+  reimplementation in `conformance/` and in `spec/semantics/progression.md`
+  §2 / `spec/semantics/groups.md` §3.1 now follows one canonical shape:
+  gate on the *logged* value against the floor first (so a true hold —
+  no assignment at all — is possible), then copy the log into `state`
+  and branch on the ceiling using compound assignment.
 
 ### Open questions (tracked in the spec, not yet resolved)
 - `dropset`/`restpause` surface syntax (`spec/semantics/groups.md` §5).

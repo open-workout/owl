@@ -191,15 +191,15 @@ func (l *lexer) lexPunct(start Pos) (Token, error) {
 	case '.':
 		return Token{Kind: DOT, Lit: ".", Pos: start}, nil
 	case '*':
-		return Token{Kind: STAR, Lit: "*", Pos: start}, nil
+		return two('=', STAR_ASSIGN, STAR), nil
 	case '/':
-		return Token{Kind: SLASH, Lit: "/", Pos: start}, nil
+		return two('=', SLASH_ASSIGN, SLASH), nil
 	case '@':
 		return Token{Kind: AT, Lit: "@", Pos: start}, nil
 	case '+':
-		return Token{Kind: PLUS, Lit: "+", Pos: start}, nil
+		return two('=', PLUS_ASSIGN, PLUS), nil
 	case '-':
-		return Token{Kind: MINUS, Lit: "-", Pos: start}, nil
+		return two('=', MINUS_ASSIGN, MINUS), nil
 	case '|':
 		return Token{Kind: PIPE, Lit: "|", Pos: start}, nil
 	case ':':

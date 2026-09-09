@@ -63,6 +63,13 @@ const (
 	NE
 	PIPE  // '|', introduces a state binding's fallback
 	COLON // ':', the optional cosmetic marker after 'then'
+
+	// Compound assignment — progressAssign only; see grammar.ebnf's
+	// assignOp production.
+	PLUS_ASSIGN
+	MINUS_ASSIGN
+	STAR_ASSIGN
+	SLASH_ASSIGN
 )
 
 var keywords = map[string]Kind{
@@ -100,6 +107,7 @@ var kindNames = map[Kind]string{
 	STAR: "'*'", SLASH: "'/'", AT: "'@'", PLUS: "'+'", MINUS: "'-'",
 	LT: "'<'", GT: "'>'", LE: "'<='", GE: "'>='", EQ: "'=='", NE: "'!='",
 	PIPE: "'|'", COLON: "':'",
+	PLUS_ASSIGN: "'+='", MINUS_ASSIGN: "'-='", STAR_ASSIGN: "'*='", SLASH_ASSIGN: "'/='",
 }
 
 func (k Kind) String() string {

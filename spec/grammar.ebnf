@@ -103,9 +103,17 @@ setDecl        ::= 'set' ( IDENT | '_' ) '=' quantity ( '@' quantity )? dropModi
 progressDecl   ::= 'progress' '=' progressBody
 progressBody   ::= '{' progressStmt* '}'
 progressStmt   ::= ( progressAssign | progressIf ) ';'?
-progressAssign ::= dottedPath '=' expr
+progressAssign ::= dottedPath assignOp expr
 progressIf     ::= 'if' condExpr 'then' ':'? progressStmt*
                     ( 'else' ( progressIf | progressStmt* ) )?
+
+(* `path op= expr` (op one of '+','-','*','/') desugars to
+   `path = path op expr` at parse time — sugar, not a new
+   canonical-form shape; see spec/semantics/progression.md §2.
+   Scoped to progressAssign only: a stateBinding's '=' is a one-time
+   seed formula and assignStmt's '=' names a group expression, neither
+   has a "current value" a mutation would read. *)
+assignOp       ::= '=' | '+=' | '-=' | '*=' | '/='
 
 (* A named dropset groups a top set with its drop-sets as one atomic
    unit (see spec/semantics/groups.md §3.8). Only `setDecl`s are valid

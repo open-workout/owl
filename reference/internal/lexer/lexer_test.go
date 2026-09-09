@@ -53,6 +53,53 @@ func TestArithmeticAndBooleanTokens(t *testing.T) {
 	}
 }
 
+func TestCompoundAssignTokens(t *testing.T) {
+	tests := []struct {
+		src  string
+		kind Kind
+	}{
+		{"+=", PLUS_ASSIGN},
+		{"-=", MINUS_ASSIGN},
+		{"*=", STAR_ASSIGN},
+		{"/=", SLASH_ASSIGN},
+	}
+	for _, tc := range tests {
+		t.Run(tc.src, func(t *testing.T) {
+			toks, err := Lex(tc.src)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(toks) != 2 { // the operator + EOF
+				t.Fatalf("got %d tokens, want 2", len(toks))
+			}
+			if toks[0].Kind != tc.kind {
+				t.Fatalf("got %v, want %v", toks[0].Kind, tc.kind)
+			}
+			if toks[0].Lit != tc.src {
+				t.Fatalf("got Lit %q, want %q", toks[0].Lit, tc.src)
+			}
+		})
+	}
+}
+
+func TestCompoundAssignVsPlainOperator(t *testing.T) {
+	// Without a following '=', these must still lex as the plain
+	// single-char operator — the two() lookahead must not misfire.
+	toks, err := Lex("tm.x + 5 - 1 * 2 / 3")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Kind{IDENT, DOT, IDENT, PLUS, NUMBER, MINUS, NUMBER, STAR, NUMBER, SLASH, NUMBER, EOF}
+	if len(toks) != len(want) {
+		t.Fatalf("got %d tokens, want %d", len(toks), len(want))
+	}
+	for i, k := range want {
+		if toks[i].Kind != k {
+			t.Fatalf("token %d: got %v, want %v", i, toks[i].Kind, k)
+		}
+	}
+}
+
 func TestCatalogNameRequiresNoGap(t *testing.T) {
 	if _, err := Lex("$ Foo"); err == nil {
 		t.Fatal("expected an error for '$' followed by whitespace")

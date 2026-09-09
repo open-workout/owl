@@ -399,6 +399,91 @@ func TestParseProgressAssign_DropsetQualifiedLog(t *testing.T) {
 	}
 }
 
+func TestParseProgressAssign_CompoundOps(t *testing.T) {
+	tests := []struct {
+		src  string
+		want func(t *testing.T, e Expr)
+	}{
+		{"tm.squat.weight += 5", func(t *testing.T, e Expr) {
+			if _, ok := e.(*AddExpr); !ok {
+				t.Fatalf("got %T, want *AddExpr", e)
+			}
+		}},
+		{"tm.squat.weight -= 5", func(t *testing.T, e Expr) {
+			if _, ok := e.(*SubExpr); !ok {
+				t.Fatalf("got %T, want *SubExpr", e)
+			}
+		}},
+		{"tm.squat.weight *= 2", func(t *testing.T, e Expr) {
+			if _, ok := e.(*MulExpr); !ok {
+				t.Fatalf("got %T, want *MulExpr", e)
+			}
+		}},
+		{"tm.squat.weight /= 2", func(t *testing.T, e Expr) {
+			if _, ok := e.(*DivExpr); !ok {
+				t.Fatalf("got %T, want *DivExpr", e)
+			}
+		}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.src, func(t *testing.T) {
+			p := newParser(t, tc.src)
+			a, err := p.parseProgressAssign()
+			if err != nil {
+				t.Fatal(err)
+			}
+			tc.want(t, a.Expr)
+		})
+	}
+}
+
+func TestParseProgressAssign_CompoundOpDesugarsToSelfRead(t *testing.T) {
+	// tm.squat.weight += 5  =>  Assign{Path: "tm.squat.weight",
+	// Expr: AddExpr{Left: DottedPath{tm.squat.weight}, Right: 5}}
+	p := newParser(t, "tm.squat.weight += 5")
+	a, err := p.parseProgressAssign()
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantPath := []string{"tm", "squat", "weight"}
+	if len(a.Path.Segments) != len(wantPath) {
+		t.Fatalf("got path %v, want %v", a.Path.Segments, wantPath)
+	}
+	add, ok := a.Expr.(*AddExpr)
+	if !ok {
+		t.Fatalf("got %T, want *AddExpr", a.Expr)
+	}
+	left, ok := add.Left.(*DottedPath)
+	if !ok {
+		t.Fatalf("left: got %T, want *DottedPath", add.Left)
+	}
+	if len(left.Segments) != len(wantPath) {
+		t.Fatalf("left segments: got %v, want %v", left.Segments, wantPath)
+	}
+	for i := range wantPath {
+		if left.Segments[i] != wantPath[i] {
+			t.Fatalf("left segments: got %v, want %v", left.Segments, wantPath)
+		}
+	}
+	right, ok := add.Right.(*NumberLit)
+	if !ok || right.Value != 5 {
+		t.Fatalf("right: got %+v, want NumberLit{5}", add.Right)
+	}
+}
+
+func TestParseProgressAssign_PlainEqualsStillWorks(t *testing.T) {
+	// Regression: compound-assign lookahead must not break plain '='.
+	p := newParser(t, "tm.squat.reps = 8")
+	a, err := p.parseProgressAssign()
+	if err != nil {
+		t.Fatal(err)
+	}
+	lit, ok := a.Expr.(*NumberLit)
+	if !ok || lit.Value != 8 {
+		t.Fatalf("got %+v, want NumberLit{8}", a.Expr)
+	}
+}
+
 func TestParseDropsetDecl(t *testing.T) {
 	src := `dropset ds = {
 		set top = 12 @ tm.leg_ext.weight

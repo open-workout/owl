@@ -10,7 +10,7 @@ block main = {
             set top = 12 @ tm.leg_ext.weight drop(0.8, 0.6)
             progress = {
                 if top.reps >= 15 then
-                    tm.leg_ext.weight = tm.leg_ext.weight + 5
+                    tm.leg_ext.weight += 5
             }
         }
         legext;

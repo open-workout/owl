@@ -33,8 +33,8 @@ Every dotted path bound in `state` may be written by **at most one**
 exercise's `progress` block anywhere in the program. An exercise's
 `progress = { ... }` writes whatever `state` paths appear as the `path`
 of one of its `assign` statements ([`progression.md`](./progression.md)
-§2-4) — e.g. `tm.squat.weight = tm.squat.weight + 5` inside `squat`'s
-`progress` block claims `tm.squat.weight` — and no *other* exercise's
+§2-4) — e.g. `tm.squat.weight += 5` inside `squat`'s `progress` block
+claims `tm.squat.weight` — and no *other* exercise's
 `progress` block may assign that same path.
 
 This is a **validation rule enforced at compile time**, not a grammar

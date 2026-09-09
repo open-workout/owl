@@ -13,9 +13,9 @@ block main = {
             set top_set = 5 @ tm.squat.weight
             progress = {
                 if tm.squat.weight > 150 then
-                    tm.squat.weight = tm.squat.weight + 2.5
+                    tm.squat.weight += 2.5
                 else
-                    tm.squat.weight = tm.squat.weight + 5
+                    tm.squat.weight += 5
             }
         }
         squat;

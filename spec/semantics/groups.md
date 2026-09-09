@@ -81,11 +81,14 @@ modes for the same reason — see §1.)
 exercise back_squat = $BarbellBackSquat {
     set work = tm.squat.reps @ 0.8 * tm.squat.weight
     progress = {
-        if work.reps >= 5 then
-            tm.squat.weight = tm.squat.weight + 5
-            tm.squat.reps = 3
-        else if work.reps >= 3 then
-            tm.squat.reps = tm.squat.reps + 1
+        if work.reps >= 3 then
+            tm.squat.reps = work.reps
+            tm.squat.weight = work.weight
+            if tm.squat.reps >= 5 then
+                tm.squat.weight += 5
+                tm.squat.reps = 3
+            else
+                tm.squat.reps += 1
     }
 }
 ```
@@ -250,9 +253,9 @@ exercise legext = $LegExtension {
     }
     progress = {
         if ds.top.reps >= 15 then
-            tm.leg_ext.weight = tm.leg_ext.weight + 5
+            tm.leg_ext.weight += 5
         else if ds.top.reps >= 8 then
-            tm.leg_ext.weight = tm.leg_ext.weight + 2.5
+            tm.leg_ext.weight += 2.5
     }
 }
 ```
@@ -287,7 +290,7 @@ exercise legext = $LegExtension {
     set top = 12 @ tm.leg_ext.weight drop(0.8, 0.6)   # top + two auto-drops to failure
     progress = {
         if top.reps >= 15 then
-            tm.leg_ext.weight = tm.leg_ext.weight + 5
+            tm.leg_ext.weight += 5
     }
 }
 ```

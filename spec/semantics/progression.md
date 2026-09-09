@@ -38,25 +38,40 @@ because of them (e.g. `CardioRower`'s plain distance sets in
 exercise squat = $BarbellBackSquat {
     set top_set = tm.squat.reps @ tm.squat.weight
     progress = {
-        if top_set.reps >= 12 then
-            tm.squat.weight = tm.squat.weight + 5
-            tm.squat.reps = 8
-        else if top_set.reps >= 8 then
-            tm.squat.reps = tm.squat.reps + 1
+        if top_set.reps >= 8 then           # floor gate, on the LOGGED value —
+                                             # if false, nothing below runs at
+                                             # all: true hold, state untouched.
+            tm.squat.reps = top_set.reps
+            tm.squat.weight = top_set.weight
+            if tm.squat.reps >= 12 then
+                tm.squat.weight += 5
+                tm.squat.reps = 8
+            else
+                tm.squat.reps += 1
     }
 }
 ```
 
 A `progressBody` is a statement list (`ProgressionStmt[]`) of two kinds:
 
-- **`assign`** (`path = expr`): writes one `state` path.
+- **`assign`** (`path op= expr`, `op` one of `=`, `+=`, `-=`, `*=`,
+  `/=`): writes one `state` path. A compound `op=` is sugar, desugared
+  at parse time into `path = path op expr` — `tm.squat.weight += 5`
+  compiles to the exact same `Assign` node `tm.squat.weight =
+  tm.squat.weight + 5` would, reading the path's own current value as
+  the left operand of an ordinary `add`/`sub`/`mul`/`div` `Expr`. No new
+  canonical-form shape; see `grammar.ebnf`'s `assignOp` production.
+  Compound assignment is scoped to `progressAssign` only — a `state`
+  binding's `=` seeds a value once and a named-group `=` names a group
+  expression, neither has a "current value" to mutate.
 - **`if`** (`progressionIf`): picks one of two statement lists to run,
   based on `cond` — evaluated once, against *this session's* data (§3),
   not deferred to a later pass the way [`conditionals.md`](./conditionals.md)'s
   `conditionalMember` is. `else` is optional here (nowhere else in the
   language is it); an omitted or untaken branch simply performs no
   assignments — this is how "hold, don't update" (`double`'s old step 1)
-  is expressed: a branch that assigns nothing.
+  is expressed: a branch (or, as in the outer `if` above, an entire
+  gated block) that assigns nothing.
 
 Every `dottedPath` inside a `progressBody`'s `expr`s means something
 slightly different than it does everywhere else in the language — see
@@ -95,10 +110,22 @@ a `cond`:
   to a local set-field reference.
 
 `double`'s old three-way branch, reimplemented as ordinary code, reads
-exactly as it did in prose: "if the logged reps hit the ceiling, bump
-the weight and reset reps; else if they cleared the floor, bump reps;
-else do nothing" — no scheme name, no positional `args` tuple, just
-`if`/`then`/`else` and arithmetic over named values.
+exactly as it did in prose: "if the logged reps are below the floor,
+hold; else copy the log into `state` and, if it hit the ceiling, bump
+the weight and reset reps — otherwise bump reps" — no scheme name, no
+positional `args` tuple, just `if`/`then`/`else`, assignment, and
+arithmetic over named values (§2's example is the canonical shape every
+`double`-style reimplementation in `conformance/` follows).
+
+The floor check has to test the **logged** value (`top_set.reps`), not
+`tm.squat.reps`, and has to gate the copy-down assignments rather than
+follow them: were it written the other way — copy first, then check
+`tm.squat.reps` — a below-floor session would already have overwritten
+`state` with the sub-floor logged values by the time the floor check
+ran, which isn't "hold" at all, just a training max that silently drops
+to whatever the athlete happened to log. Testing the log value first,
+before any assignment, is what makes "false → skip the whole block →
+`state` never touched" an actual hold.
 
 ## 4. Ownership
 

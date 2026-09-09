@@ -9,13 +9,13 @@ block main = {
         exercise squatA = $BarbellBackSquat {
             set a = 5 @ tm.squat.weight
             progress = {
-                tm.squat.weight = tm.squat.weight + 5
+                tm.squat.weight += 5
             }
         }
         exercise squatB = $BarbellBackSquat {
             set b = 5 @ tm.squat.weight
             progress = {
-                tm.squat.weight = tm.squat.weight + 5
+                tm.squat.weight += 5
             }
         }
         squatA;

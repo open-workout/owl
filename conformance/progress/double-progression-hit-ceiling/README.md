@@ -7,9 +7,10 @@ but here the athlete already has a stored `tm.squat.weight` (100) and
 once one exists).
 
 `log.json` records the top set completed at 12 reps @ 100kg. `squat`'s
-`progress` block (see `canonical.json`) reads that as
-`top_set.reps >= 12` — true, the rep-ceiling branch — so it assigns
-`tm.squat.weight = tm.squat.weight + 5` (105) and
+`progress` block (see `canonical.json`) reads that as: outer floor gate
+`top_set.reps >= 8` — true, so `tm.squat.reps`/`tm.squat.weight` get
+copied from the log (12, 100); inner ceiling check
+`tm.squat.reps >= 12` — true, so `tm.squat.weight += 5` (105) and
 `tm.squat.reps = 8`, the reset floor. This is the same "hold / bump reps
 / bump weight and reset" logic the old built-in `double` scheme used to
 encode positionally; see

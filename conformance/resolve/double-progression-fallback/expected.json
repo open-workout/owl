@@ -38,34 +38,44 @@
               "type": "comparison",
               "op": ">=",
               "left": { "type": "log", "label": "top_set", "field": "reps" },
-              "right": { "type": "number", "value": 12 }
+              "right": { "type": "number", "value": 8 }
             },
             "then": [
               {
                 "type": "assign",
-                "path": "tm.squat.weight",
-                "expr": {
-                  "type": "add",
-                  "left": { "type": "path", "path": "tm.squat.weight" },
-                  "right": { "type": "number", "value": 5 }
-                }
+                "path": "tm.squat.reps",
+                "expr": { "type": "log", "label": "top_set", "field": "reps" }
               },
               {
                 "type": "assign",
-                "path": "tm.squat.reps",
-                "expr": { "type": "number", "value": 8 }
-              }
-            ],
-            "else": [
+                "path": "tm.squat.weight",
+                "expr": { "type": "log", "label": "top_set", "field": "weight" }
+              },
               {
                 "type": "if",
                 "cond": {
                   "type": "comparison",
                   "op": ">=",
-                  "left": { "type": "log", "label": "top_set", "field": "reps" },
-                  "right": { "type": "number", "value": 8 }
+                  "left": { "type": "path", "path": "tm.squat.reps" },
+                  "right": { "type": "number", "value": 12 }
                 },
                 "then": [
+                  {
+                    "type": "assign",
+                    "path": "tm.squat.weight",
+                    "expr": {
+                      "type": "add",
+                      "left": { "type": "path", "path": "tm.squat.weight" },
+                      "right": { "type": "number", "value": 5 }
+                    }
+                  },
+                  {
+                    "type": "assign",
+                    "path": "tm.squat.reps",
+                    "expr": { "type": "number", "value": 8 }
+                  }
+                ],
+                "else": [
                   {
                     "type": "assign",
                     "path": "tm.squat.reps",

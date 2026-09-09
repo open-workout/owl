@@ -14,7 +14,7 @@ block main = {
             }
             progress = {
                 if ds.top.reps >= 15 then
-                    tm.leg_ext.weight = tm.leg_ext.weight + 5
+                    tm.leg_ext.weight += 5
             }
         }
         legext;
