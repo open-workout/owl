@@ -33,8 +33,7 @@
                   "label": "top_set",
                   "exercise": "BarbellBackSquat",
                   "target": { "kind": "reps", "expr": { "type": "path", "path": "tm.squat.reps" } },
-                  "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.squat.weight" }, "unit": "kg" },
-                  "progression": { "scheme": "double", "target": "top_set", "args": [8, 12, 5] }
+                  "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.squat.weight" }, "unit": "kg" }
                 }
               ],
               "body": {
@@ -50,8 +49,68 @@
                     "label": "top_set",
                     "exercise": "BarbellBackSquat",
                     "target": { "kind": "reps", "expr": { "type": "path", "path": "tm.squat.reps" } },
-                    "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.squat.weight" }, "unit": "kg" },
-                    "progression": { "scheme": "double", "target": "top_set", "args": [8, 12, 5] }
+                    "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.squat.weight" }, "unit": "kg" }
+                  }
+                ]
+              },
+              "progress": {
+                "stmts": [
+                  {
+                    "type": "if",
+                    "cond": {
+                      "type": "comparison",
+                      "op": ">=",
+                      "left": { "type": "log", "label": "top_set", "field": "reps" },
+                      "right": { "type": "number", "value": 8 }
+                    },
+                    "then": [
+                      {
+                        "type": "assign",
+                        "path": "tm.squat.reps",
+                        "expr": { "type": "log", "label": "top_set", "field": "reps" }
+                      },
+                      {
+                        "type": "assign",
+                        "path": "tm.squat.weight",
+                        "expr": { "type": "log", "label": "top_set", "field": "weight" }
+                      },
+                      {
+                        "type": "if",
+                        "cond": {
+                          "type": "comparison",
+                          "op": ">=",
+                          "left": { "type": "path", "path": "tm.squat.reps" },
+                          "right": { "type": "number", "value": 12 }
+                        },
+                        "then": [
+                          {
+                            "type": "assign",
+                            "path": "tm.squat.weight",
+                            "expr": {
+                              "type": "add",
+                              "left": { "type": "path", "path": "tm.squat.weight" },
+                              "right": { "type": "number", "value": 5 }
+                            }
+                          },
+                          {
+                            "type": "assign",
+                            "path": "tm.squat.reps",
+                            "expr": { "type": "number", "value": 8 }
+                          }
+                        ],
+                        "else": [
+                          {
+                            "type": "assign",
+                            "path": "tm.squat.reps",
+                            "expr": {
+                              "type": "add",
+                              "left": { "type": "path", "path": "tm.squat.reps" },
+                              "right": { "type": "number", "value": 1 }
+                            }
+                          }
+                        ]
+                      }
+                    ]
                   }
                 ]
               }

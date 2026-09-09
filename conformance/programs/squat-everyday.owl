@@ -28,24 +28,60 @@ block leader = {
 		exercise squat = $BarbellBackSquat {
 			set _ = 10 @ 0.8 * tm.squat.weight;
 			set top_set = tm.squat.reps+ @ tm.squat.weight;
-			progress = double(top_set,8,12,5)
+			progress = {
+				if top_set.reps >= 8 then
+					tm.squat.reps = top_set.reps
+					tm.squat.weight = top_set.weight
+					if tm.squat.reps >= 12 then
+						tm.squat.weight += 5
+						tm.squat.reps = 8
+					else
+						tm.squat.reps += 1
+			}
 		}
 		exercise legext = $LegExtension {
 			set le0 = tm.leg_ext.reps @ tm.leg_ext.weight
 			set le1 = tm.leg_ext.reps+ @ tm.leg_ext.weight
-			progress = double(le1,8,15,5)
+			progress = {
+				if le1.reps >= 8 then
+					tm.leg_ext.reps = le1.reps
+					tm.leg_ext.weight = le1.weight
+					if tm.leg_ext.reps >= 15 then
+						tm.leg_ext.weight += 5
+						tm.leg_ext.reps = 8
+					else
+						tm.leg_ext.reps += 1
+			}
 		}
 		
 		exercise llegcurl = $LyingLegCurl {
 			set lc0 = tm.leg_curl.reps @ 0.7 * tm.leg_curl.weight
 			set lc1 = tm.leg_curl.reps+ @ tm.leg_curl.weight
-			progress = double(lc1,10,20,5)
+			progress = {
+				if lc1.reps >= 10 then
+					tm.leg_curl.reps = lc1.reps
+					tm.leg_curl.weight = lc1.weight
+					if tm.leg_curl.reps >= 20 then
+						tm.leg_curl.weight += 5
+						tm.leg_curl.reps = 10
+					else
+						tm.leg_curl.reps += 1
+			}
 		}
 		
 		exercise calfraise = $SeatedCalfRaise {
 			set lc0 = tm.calf_raise.reps @ 0.7 * tm.calf_raise.weight
 			set lc1 = tm.calf_raise.reps+ @ tm.calf_raise.weight
-			progress = double(lc1,10,20,5)
+			progress = {
+				if lc1.reps >= 10 then
+					tm.calf_raise.reps = lc1.reps
+					tm.calf_raise.weight = lc1.weight
+					if tm.calf_raise.reps >= 20 then
+						tm.calf_raise.weight += 5
+						tm.calf_raise.reps = 10
+					else
+						tm.calf_raise.reps += 1
+			}
 		}
 		
 		squat;
@@ -59,13 +95,31 @@ block leader = {
         exercise frontSquat = $BarbellFrontSquat {
             set _ = 0.8 * tm.fsquat.reps @ 0.8 * tm.fsquat.weight
             set top_set = tm.fsquat.reps @ tm.fsquat.weight
-            progress = double(top_set,4,7,5)
+            progress = {
+                if top_set.reps >= 4 then
+                    tm.fsquat.reps = top_set.reps
+                    tm.fsquat.weight = top_set.weight
+                    if tm.fsquat.reps >= 7 then
+                        tm.fsquat.weight += 5
+                        tm.fsquat.reps = 4
+                    else
+                        tm.fsquat.reps += 1
+            }
         }
 
         exercise bp = $BarbellBenchPress {
             set _ = 0.8 * tm.bp.reps @ 0.8 * tm.bp.weight
             set top_set = tm.bp.reps @ tm.bp.weight
-            progress = double(top_set, 5,8,5)
+            progress = {
+                if top_set.reps >= 5 then
+                    tm.bp.reps = top_set.reps
+                    tm.bp.weight = top_set.weight
+                    if tm.bp.reps >= 8 then
+                        tm.bp.weight += 5
+                        tm.bp.reps = 5
+                    else
+                        tm.bp.reps += 1
+            }
         }
 
         frontSquat;

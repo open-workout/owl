@@ -45,19 +45,22 @@ built out: nothing needs them yet.
 ```
 reference/
 ├── owl.go              public API: Compile, Resolve, Progress (+ ParseCanonicalJSON)
-├── types.go, codec.go  Go structs mirroring canonical-form.schema.json, JSON codec
+├── types.go             canonical-form types, re-exported from internal/ir as aliases
 ├── internal/
-│   ├── lexer/           tokenizer for spec/grammar.ebnf        (not written yet)
-│   ├── parser/          recursive-descent parser → AST         (not written yet)
-│   └── compiler/        AST → canonical form (desugaring)      (not written yet)
+│   ├── ir/               canonical-form wire types + JSON codec (leaf package)
+│   ├── lexer/            tokenizer for spec/grammar.ebnf
+│   ├── parser/           recursive-descent parser → AST
+│   └── compiler/         AST → canonical form (desugaring, conditionals,
+│                          single-owner-rule validation)
 └── cmd/owlc/            CLI: parse | validate | validate-fixtures
 ```
 
-**Current status**: `types.go`/`codec.go` and `ParseCanonicalJSON` work.
-`Compile`, `Resolve`, `Progress` in `owl.go` are stubs that return
-`ErrNotImplemented`. The lexer/parser/compiler is the next real chunk of
-work — that's where new parser/compiler code belongs, wired up through
-`Compile` in `owl.go` as the only public entry point.
+**Current status**: `Compile` is implemented (lexer → parser →
+compiler) and passes every `conformance/parse/*` fixture plus all of
+`conformance/programs/*.owl`, run via `go test ./...`. `Resolve` and
+`Progress` in `owl.go` are still stubs that return `ErrNotImplemented`
+— a separate per-athlete tree-walk over the already-compiled `*Program`,
+not more parsing, and the next real chunk of work.
 
 A hand-written recursive-descent parser is the deliberate choice over a
 parser generator (ANTLR/pigeon/etc.) — `grammar.ebnf`'s productions don't
@@ -71,24 +74,26 @@ gofmt -l .                        # must be clean
 go vet ./...
 go build ./...
 go run ./cmd/owlc validate-fixtures ..   # validates conformance/ fixtures against JSON Schema
+go test ./...                            # runs Compile against every conformance/parse/* fixture
 ```
 
-This is exactly what CI (`.github/workflows/ci.yml`) runs. Note
+This is exactly what CI (`.github/workflows/ci.yml`) runs.
 `validate-fixtures` only checks fixtures are well-formed against the
-schemas — it does not yet run a real `Compile`/`Resolve`/`Progress` and
-diff against `expected.json`, because those aren't implemented. Once they
-are, that CI step should be replaced (see the TODO in `ci.yml`) with one
-that actually exercises `conformance/{parse,resolve,progress}/` end to
-end — that's a natural signal for "the parser/compiler is far enough
-along to wire into CI."
+schemas; `go test` is what actually runs `Compile` against them and
+diffs the result against `expected.json` as Go values. `Resolve`/
+`Progress` aren't implemented yet, so `conformance/{resolve,progress}/`
+aren't exercised by `go test` yet either — extending it to cover them
+is the natural next step once those two land.
 
 ## Conformance fixtures
 
 `conformance/parse/<case>/` = `source.owl` + (`expected.json` canonical
-form, or `expected-error.json`). `conformance/resolve/` and
-`conformance/progress/` similarly pair inputs with an expected output.
-When the parser/compiler lands, these are the fixtures it must satisfy —
-see `conformance/README.md` for the exact directory contract per kind.
+form, or `expected-error.json`) — `reference/compile_test.go` runs
+`Compile` against every case here. `conformance/resolve/` and
+`conformance/progress/` similarly pair inputs with an expected output;
+these aren't wired into `go test` yet since `Resolve`/`Progress` aren't
+implemented. See `conformance/README.md` for the exact directory
+contract per kind.
 
 ## Changing the language vs. changing an implementation
 

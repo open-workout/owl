@@ -30,24 +30,30 @@ treat them as synonyms.
 ## 2. The single-owner rule
 
 Every dotted path bound in `state` may be written by **at most one**
-`progress` rule anywhere in the program. `progress = double(top_set, 8,
-12, 5)` on the `squat` exercise updates `tm.squat.weight`/`tm.squat.reps`
-because `top_set`'s own `load`/`target` expressions read those paths — and
-no other `progress` line in the program is allowed to also target a set
-whose expressions read `tm.squat.*`.
+exercise's `progress` block anywhere in the program. An exercise's
+`progress = { ... }` writes whatever `state` paths appear as the `path`
+of one of its `assign` statements ([`progression.md`](./progression.md)
+§2-4) — e.g. `tm.squat.weight += 5` inside `squat`'s `progress` block
+claims `tm.squat.weight` — and no *other* exercise's
+`progress` block may assign that same path.
 
 This is a **validation rule enforced at compile time**, not a grammar
-constraint: a compiler must reject a program where two `SetRef`s with
-`ProgressionRule`s resolve to overlapping write-sets. It exists so
-`progress`'s per-session update ([`progression.md`](./progression.md) §2)
-is always unambiguous — there is never a "which rule wins" question,
-because only one rule can ever apply to a given path.
+constraint: a compiler must reject a program where two different
+exercises' `progress` blocks assign the same `state` path. It exists so
+`progress`'s per-session update is always unambiguous — there is never a
+"which assignment wins" question across exercises, because only one
+exercise's code can ever write a given path. Within *one* exercise's own
+`progress` block, the same path may appear as the `path` of `assign`
+statements in multiple, mutually exclusive `if`/`else` branches (that's
+the normal way to express "update this path differently depending on
+what happened") — the rule only concerns *different exercises*
+colliding on the same path.
 
-A `state` path with **no** `progress` rule targeting it anywhere is valid
-and common — it's simply never updated automatically; it stays at
+A `state` path with **no** `progress` block assigning it anywhere is
+valid and common — it's simply never updated automatically; it stays at
 whatever value onboarding or a manual edit gave it (e.g. `tm.squat.reps =
-5` in the examples is a fixed rep-scheme parameter, not something
-`double` touches — only the *weight* side progresses).
+5` in the examples is a fixed rep-scheme parameter that a `progress`
+block may choose not to touch at all).
 
 ## 3. Onboarding: the sentinel fallback
 

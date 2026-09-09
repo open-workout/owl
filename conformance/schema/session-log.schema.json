@@ -10,7 +10,7 @@
     "required": ["exercise", "label", "performedTarget"],
     "properties": {
       "exercise": { "type": "string", "description": "Catalog name, matching the SetRef's `exercise`." },
-      "label": { "type": "string", "description": "The `set` label this entry logs, matching ProgressionRule.target for progressable sets." },
+      "label": { "type": "string", "description": "The `set` label this entry logs — what a `progress` block's `<label>.<field>` reads (spec/semantics/progression.md §2-3)." },
       "performedTarget": { "type": "number", "description": "Reps completed, distance covered, or duration held — whichever `target.kind` the resolved SetRef used." },
       "performedLoad": { "type": "number", "description": "Weight actually used, if the set had a `load`." }
     }

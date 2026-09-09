@@ -8,7 +8,10 @@ block main = {
     day day1 = {
         exercise legext = $LegExtension {
             set top = 12 @ tm.leg_ext.weight drop(0.8, 0.6)
-            progress = double(top, 8, 15, 5)
+            progress = {
+                if top.reps >= 15 then
+                    tm.leg_ext.weight += 5
+            }
         }
         legext;
     }

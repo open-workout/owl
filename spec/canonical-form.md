@@ -21,9 +21,12 @@ Program {
 Block { name, days: Day[], body: Group }       // body sequences the days
 Day   { name, exercises: ExerciseDecl[], groups: NamedGroup[], body: Group }
 
-ExerciseDecl { name, catalog, sets: SetRef[], groups: NamedGroup[], body: Group }
+ExerciseDecl { name, catalog, sets: SetRef[], groups: NamedGroup[], body: Group,
+               progress?: ProgressionBody }
                                                 // one `exercise` decl; `groups` holds
-                                                // named `dropset` declarations (semantics/groups.md §3.8)
+                                                // named `dropset` declarations (semantics/groups.md §3.8);
+                                                // `progress` is this exercise's own progression
+                                                // code, at most one per exercise (semantics/progression.md)
 NamedGroup   { name, group: Group }            // one `partA = <groupExpr>` assignment
 
 Group { kind, members: Member[], interleave, rest, termination, atomic }
@@ -32,13 +35,28 @@ Ref    { name }                                // a bare-name use: exercise, nam
                                                 // group, day, or block — resolved
                                                 // against the enclosing declarations
 
-SetRef { exercise, target, load?, progression? }
+SetRef { exercise, target, load? }
 Target = Reps | Distance | Duration           // what to do
 Load   = Weight                               // what to do it against
-progression: ProgressionRule | Conditional<ProgressionRule>
 
-Conditional<T> { cond: BoolExpr, then: T, else: T }   // `if cond then: A else B`;
-                                                       // see semantics/conditionals.md
+Conditional<Member> { cond: BoolExpr, then: Member, else: Member }
+                                                // `if cond then: A else B` at the
+                                                // dayItem/blockItem/topLevelItem levels;
+                                                // see semantics/conditionals.md
+
+ProgressionBody { stmts: ProgressionStmt[] }   // an exercise's `progress = { … }` block
+ProgressionStmt = Assign | ProgressionIf
+Assign          { path, expr }                 // `<state path> = <expr>`
+ProgressionIf   { cond: BoolExpr, then: ProgressionStmt[], else?: ProgressionStmt[] }
+                                                // progress's own if/then/else — run
+                                                // directly by progress(), not deferred
+                                                // to resolve() the way Conditional<Member> is;
+                                                // `else` is optional (nowhere else is)
+
+BoolExpr = Comparison | And | Or               // shared by Conditional.cond and
+Comparison { op, left: Expr, right: Expr }     // ProgressionIf.cond
+And        { left: BoolExpr, right: BoolExpr }
+Or         { left: BoolExpr, right: BoolExpr }
 ```
 
 A `Block`/`Day`'s `body` is always present, even when the source has no
@@ -81,9 +99,9 @@ job — a separate, per-athlete pass. See:
   `then`/`else`, the `Conditional` shape above, and why it's resolved at
   `resolve` time rather than compile time.
 - [`semantics/resolution.md`](./semantics/resolution.md) — `resolve`.
-- [`semantics/progression.md`](./semantics/progression.md) and
-  [`stdlib/schemes.md`](./stdlib/schemes.md) — how a logged session flows
-  back into updated `state`.
+- [`semantics/progression.md`](./semantics/progression.md) — `progress`,
+  and the `ProgressionBody`/`Assign`/`ProgressionIf` shapes above:
+  how a logged session flows back into updated `state`.
 
 ## Versioning
 

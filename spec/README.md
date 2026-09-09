@@ -26,10 +26,10 @@ If you're new to OWL, read in this order:
    - [`resolution.md`](./semantics/resolution.md) — turning a compiled
      program into one athlete's concrete session.
    - [`progression.md`](./semantics/progression.md) — turning a logged
-     session back into updated `state`.
-4. [`stdlib/schemes.md`](./stdlib/schemes.md) — the concrete progression
-   algorithms (`double`, …) that `progression.md` defines the contract for.
-5. [`versioning.md`](./versioning.md) — how the spec and canonical form
+     session back into updated `state`; `progress` is ordinary code (its
+     own `if`/`then`/`else`, arithmetic, assignment), not a call into a
+     fixed set of named schemes — there's no separate stdlib document.
+4. [`versioning.md`](./versioning.md) — how the spec and canonical form
    version.
 
 ## Where to look for X
@@ -39,7 +39,7 @@ If you're new to OWL, read in this order:
 | "Does `X` parse?" | `grammar.ebnf` |
 | "What does `superset(...)` actually mean?" | `semantics/groups.md` |
 | "What's the difference between reps and load?" | `semantics/targets-loads.md` |
-| "How does a training max get updated after a workout?" | `semantics/progression.md`, `stdlib/schemes.md` |
+| "How does a training max get updated after a workout?" | `semantics/progression.md` |
 | "What happens for a brand-new athlete with no history?" | `semantics/parameters.md` § Onboarding |
 | "What JSON does the app actually consume?" | `canonical-form.md`, `canonical-form.schema.json` |
 | "Is this construct real or proposed?" | Check the construct's doc for a "Proposed extensions" section — anything not backed by `conformance/programs/` is flagged, not asserted as canon. |

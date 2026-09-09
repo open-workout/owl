@@ -1,10 +1,13 @@
-Demonstrates an `exerciseItem`-level conditional
-([`spec/semantics/conditionals.md`](../../../spec/semantics/conditionals.md)
-§2, `Conditional<ProgressionRule>`), minimized from
+Demonstrates `progress`'s own `if`/`then`/`else`
+([`spec/semantics/progression.md`](../../../spec/semantics/progression.md)
+§2, `progressionIf`), minimized from
 [`if-then-else-for-progress.owl`](../../programs/if-then-else-for-progress.owl):
-both branches are `progress = double(top_set, ...)` rules targeting the
-same set (`top_set`), differing only in the `increment` argument. This
-compiles to a single `Conditional` node — not a plain `ProgressionRule` —
-at `top_set`'s `progression` field, with both `double(...)` calls
-preserved as its `then`/`else`. Which one applies is decided by `resolve`
-(`tm.squat.weight > 150`), never at parse/compile time.
+`top_set.reps` reads what was actually logged for `top_set` this session
+(compiles to `{"type":"log","label":"top_set","field":"reps"}`, distinct
+from `top_set`'s own prescribed `load` formula), and each branch
+assigns `tm.squat.weight` by a different amount. Unlike the old
+`Conditional<ProgressionRule>` shape this replaces, there is no
+`Conditional` node here at all — `progressIf` is evaluated directly by
+`progress()` against the session log, never deferred to `resolve()` the
+way a `Conditional<Member>` is (see conditionals.md §2's note on why
+`condExerciseItem` itself is no longer used for this).

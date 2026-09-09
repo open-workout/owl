@@ -1,4 +1,4 @@
-package owl
+package ir
 
 // JSON encoding/decoding for the sum-typed fields in types.go (Expr,
 // Target, Load, Member, RestPolicy, Termination) — encoding/json can't
@@ -29,6 +29,7 @@ type exprWire struct {
 	Field   string          `json:"field,omitempty"`
 	Left    json.RawMessage `json:"left,omitempty"`
 	Right   json.RawMessage `json:"right,omitempty"`
+	Label   string          `json:"label,omitempty"` // LogExpr only
 }
 
 func decodeExpr(raw json.RawMessage) (Expr, error) {
@@ -46,16 +47,27 @@ func decodeExpr(raw json.RawMessage) (Expr, error) {
 		return PathExpr{Path: w.Path}, nil
 	case "catalogField":
 		return CatalogFieldExpr{Catalog: w.Catalog, Field: w.Field}, nil
-	case "mul":
+	case "mul", "add", "sub", "div":
 		left, err := decodeExpr(w.Left)
 		if err != nil {
-			return nil, fmt.Errorf("expr: mul.left: %w", err)
+			return nil, fmt.Errorf("expr: %s.left: %w", w.Type, err)
 		}
 		right, err := decodeExpr(w.Right)
 		if err != nil {
-			return nil, fmt.Errorf("expr: mul.right: %w", err)
+			return nil, fmt.Errorf("expr: %s.right: %w", w.Type, err)
 		}
-		return MulExpr{Left: left, Right: right}, nil
+		switch w.Type {
+		case "mul":
+			return MulExpr{Left: left, Right: right}, nil
+		case "add":
+			return AddExpr{Left: left, Right: right}, nil
+		case "sub":
+			return SubExpr{Left: left, Right: right}, nil
+		default: // "div"
+			return DivExpr{Left: left, Right: right}, nil
+		}
+	case "log":
+		return LogExpr{Label: w.Label, Field: w.Field}, nil
 	default:
 		return nil, fmt.Errorf("expr: unknown type %q", w.Type)
 	}
@@ -70,16 +82,111 @@ func (e PathExpr) MarshalJSON() ([]byte, error) {
 func (e CatalogFieldExpr) MarshalJSON() ([]byte, error) {
 	return json.Marshal(exprWire{Type: "catalogField", Catalog: e.Catalog, Field: e.Field})
 }
-func (e MulExpr) MarshalJSON() ([]byte, error) {
-	left, err := json.Marshal(e.Left)
+func (e MulExpr) MarshalJSON() ([]byte, error) { return marshalBinExpr("mul", e.Left, e.Right) }
+func (e AddExpr) MarshalJSON() ([]byte, error) { return marshalBinExpr("add", e.Left, e.Right) }
+func (e SubExpr) MarshalJSON() ([]byte, error) { return marshalBinExpr("sub", e.Left, e.Right) }
+func (e DivExpr) MarshalJSON() ([]byte, error) { return marshalBinExpr("div", e.Left, e.Right) }
+func (e LogExpr) MarshalJSON() ([]byte, error) {
+	return json.Marshal(exprWire{Type: "log", Label: e.Label, Field: e.Field})
+}
+
+func marshalBinExpr(typ string, left, right Expr) ([]byte, error) {
+	l, err := json.Marshal(left)
 	if err != nil {
-		return nil, fmt.Errorf("expr: mul.left: %w", err)
+		return nil, fmt.Errorf("expr: %s.left: %w", typ, err)
 	}
-	right, err := json.Marshal(e.Right)
+	r, err := json.Marshal(right)
 	if err != nil {
-		return nil, fmt.Errorf("expr: mul.right: %w", err)
+		return nil, fmt.Errorf("expr: %s.right: %w", typ, err)
 	}
-	return json.Marshal(exprWire{Type: "mul", Left: left, Right: right})
+	return json.Marshal(exprWire{Type: typ, Left: l, Right: r})
+}
+
+// ---- BoolExpr ----
+
+type boolExprTypeProbe struct {
+	Type string `json:"type"`
+}
+
+type comparisonWire struct {
+	Type  string          `json:"type"`
+	Op    string          `json:"op"`
+	Left  json.RawMessage `json:"left"`
+	Right json.RawMessage `json:"right"`
+}
+
+type boolBinWire struct {
+	Type  string          `json:"type"`
+	Left  json.RawMessage `json:"left"`
+	Right json.RawMessage `json:"right"`
+}
+
+func decodeBoolExpr(raw json.RawMessage) (BoolExpr, error) {
+	var probe boolExprTypeProbe
+	if err := json.Unmarshal(raw, &probe); err != nil {
+		return nil, fmt.Errorf("boolExpr: %w", err)
+	}
+	switch probe.Type {
+	case "comparison":
+		var w comparisonWire
+		if err := json.Unmarshal(raw, &w); err != nil {
+			return nil, fmt.Errorf("boolExpr: %w", err)
+		}
+		left, err := decodeExpr(w.Left)
+		if err != nil {
+			return nil, fmt.Errorf("boolExpr: left: %w", err)
+		}
+		right, err := decodeExpr(w.Right)
+		if err != nil {
+			return nil, fmt.Errorf("boolExpr: right: %w", err)
+		}
+		return Comparison{Op: w.Op, Left: left, Right: right}, nil
+	case "and", "or":
+		var w boolBinWire
+		if err := json.Unmarshal(raw, &w); err != nil {
+			return nil, fmt.Errorf("boolExpr: %w", err)
+		}
+		left, err := decodeBoolExpr(w.Left)
+		if err != nil {
+			return nil, fmt.Errorf("boolExpr: left: %w", err)
+		}
+		right, err := decodeBoolExpr(w.Right)
+		if err != nil {
+			return nil, fmt.Errorf("boolExpr: right: %w", err)
+		}
+		if probe.Type == "and" {
+			return AndExpr{Left: left, Right: right}, nil
+		}
+		return OrExpr{Left: left, Right: right}, nil
+	default:
+		return nil, fmt.Errorf("boolExpr: unknown type %q", probe.Type)
+	}
+}
+
+func (c Comparison) MarshalJSON() ([]byte, error) {
+	left, err := json.Marshal(c.Left)
+	if err != nil {
+		return nil, fmt.Errorf("boolExpr: left: %w", err)
+	}
+	right, err := json.Marshal(c.Right)
+	if err != nil {
+		return nil, fmt.Errorf("boolExpr: right: %w", err)
+	}
+	return json.Marshal(comparisonWire{Type: "comparison", Op: c.Op, Left: left, Right: right})
+}
+func (a AndExpr) MarshalJSON() ([]byte, error) { return marshalBoolBin("and", a.Left, a.Right) }
+func (o OrExpr) MarshalJSON() ([]byte, error)  { return marshalBoolBin("or", o.Left, o.Right) }
+
+func marshalBoolBin(typ string, left, right BoolExpr) ([]byte, error) {
+	l, err := json.Marshal(left)
+	if err != nil {
+		return nil, fmt.Errorf("boolExpr: left: %w", err)
+	}
+	r, err := json.Marshal(right)
+	if err != nil {
+		return nil, fmt.Errorf("boolExpr: right: %w", err)
+	}
+	return json.Marshal(boolBinWire{Type: typ, Left: l, Right: r})
 }
 
 // ---- Fallback (no polymorphism — Kind is data, not a Go sum type) ----
@@ -203,15 +310,151 @@ func (l WeightLoad) MarshalJSON() ([]byte, error) {
 	return json.Marshal(loadWire{Kind: "weight", Expr: exprJSON, Unit: l.Unit, Fallback: fallbackJSON})
 }
 
+// ---- ProgressionBody / ProgressionStmt (Assign, ProgressionIf) ----
+
+type progressionStmtTypeProbe struct {
+	Type string `json:"type"`
+}
+
+type assignWire struct {
+	Type string          `json:"type"`
+	Path string          `json:"path"`
+	Expr json.RawMessage `json:"expr"`
+}
+
+type progressionIfWire struct {
+	Type string            `json:"type"`
+	Cond json.RawMessage   `json:"cond"`
+	Then []json.RawMessage `json:"then"`
+	Else []json.RawMessage `json:"else,omitempty"`
+}
+
+func decodeProgressionStmt(raw json.RawMessage) (ProgressionStmt, error) {
+	var probe progressionStmtTypeProbe
+	if err := json.Unmarshal(raw, &probe); err != nil {
+		return nil, fmt.Errorf("progressionStmt: %w", err)
+	}
+	switch probe.Type {
+	case "assign":
+		var w assignWire
+		if err := json.Unmarshal(raw, &w); err != nil {
+			return nil, fmt.Errorf("progressionStmt: %w", err)
+		}
+		expr, err := decodeExpr(w.Expr)
+		if err != nil {
+			return nil, fmt.Errorf("assign %q: %w", w.Path, err)
+		}
+		return Assign{Path: w.Path, Expr: expr}, nil
+	case "if":
+		var w progressionIfWire
+		if err := json.Unmarshal(raw, &w); err != nil {
+			return nil, fmt.Errorf("progressionStmt: %w", err)
+		}
+		cond, err := decodeBoolExpr(w.Cond)
+		if err != nil {
+			return nil, fmt.Errorf("progressionIf: %w", err)
+		}
+		then, err := decodeProgressionStmtList(w.Then)
+		if err != nil {
+			return nil, fmt.Errorf("progressionIf: then: %w", err)
+		}
+		var els []ProgressionStmt
+		if w.Else != nil {
+			els, err = decodeProgressionStmtList(w.Else)
+			if err != nil {
+				return nil, fmt.Errorf("progressionIf: else: %w", err)
+			}
+		}
+		return ProgressionIf{Cond: cond, Then: then, Else: els}, nil
+	default:
+		return nil, fmt.Errorf("progressionStmt: unknown type %q", probe.Type)
+	}
+}
+
+func decodeProgressionStmtList(raws []json.RawMessage) ([]ProgressionStmt, error) {
+	out := make([]ProgressionStmt, len(raws))
+	for i, raw := range raws {
+		s, err := decodeProgressionStmt(raw)
+		if err != nil {
+			return nil, fmt.Errorf("stmt %d: %w", i, err)
+		}
+		out[i] = s
+	}
+	return out, nil
+}
+
+func marshalProgressionStmtList(stmts []ProgressionStmt) ([]json.RawMessage, error) {
+	if stmts == nil {
+		return nil, nil
+	}
+	out := make([]json.RawMessage, len(stmts))
+	for i, s := range stmts {
+		raw, err := json.Marshal(s)
+		if err != nil {
+			return nil, fmt.Errorf("stmt %d: %w", i, err)
+		}
+		out[i] = raw
+	}
+	return out, nil
+}
+
+func (a Assign) MarshalJSON() ([]byte, error) {
+	exprJSON, err := json.Marshal(a.Expr)
+	if err != nil {
+		return nil, fmt.Errorf("assign %q: %w", a.Path, err)
+	}
+	return json.Marshal(assignWire{Type: "assign", Path: a.Path, Expr: exprJSON})
+}
+
+func (i ProgressionIf) MarshalJSON() ([]byte, error) {
+	condJSON, err := json.Marshal(i.Cond)
+	if err != nil {
+		return nil, fmt.Errorf("progressionIf: cond: %w", err)
+	}
+	then, err := marshalProgressionStmtList(i.Then)
+	if err != nil {
+		return nil, fmt.Errorf("progressionIf: then: %w", err)
+	}
+	els, err := marshalProgressionStmtList(i.Else)
+	if err != nil {
+		return nil, fmt.Errorf("progressionIf: else: %w", err)
+	}
+	return json.Marshal(progressionIfWire{Type: "if", Cond: condJSON, Then: then, Else: els})
+}
+
+type progressionBodyWire struct {
+	Stmts []json.RawMessage `json:"stmts"`
+}
+
+func (b ProgressionBody) MarshalJSON() ([]byte, error) {
+	stmts, err := marshalProgressionStmtList(b.Stmts)
+	if err != nil {
+		return nil, fmt.Errorf("progressionBody: %w", err)
+	}
+	return json.Marshal(progressionBodyWire{Stmts: stmts})
+}
+
+func (b *ProgressionBody) UnmarshalJSON(data []byte) error {
+	var w progressionBodyWire
+	if err := json.Unmarshal(data, &w); err != nil {
+		return fmt.Errorf("progressionBody: %w", err)
+	}
+	stmts, err := decodeProgressionStmtList(w.Stmts)
+	if err != nil {
+		return fmt.Errorf("progressionBody: %w", err)
+	}
+	b.Stmts = stmts
+	return nil
+}
+
 // ---- SetRef ----
 
 type setRefWire struct {
-	Type        string           `json:"type"`
-	Label       string           `json:"label,omitempty"`
-	Exercise    string           `json:"exercise"`
-	Target      json.RawMessage  `json:"target"`
-	Load        json.RawMessage  `json:"load,omitempty"`
-	Progression *ProgressionRule `json:"progression,omitempty"`
+	Type     string          `json:"type"`
+	Label    string          `json:"label,omitempty"`
+	Exercise string          `json:"exercise"`
+	Target   json.RawMessage `json:"target"`
+	Load     json.RawMessage `json:"load,omitempty"`
 }
 
 func (s SetRef) MarshalJSON() ([]byte, error) {
@@ -228,7 +471,7 @@ func (s SetRef) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(setRefWire{
 		Type: "setRef", Label: s.Label, Exercise: s.Exercise,
-		Target: targetJSON, Load: loadJSON, Progression: s.Progression,
+		Target: targetJSON, Load: loadJSON,
 	})
 }
 
@@ -249,7 +492,6 @@ func (s *SetRef) UnmarshalJSON(data []byte) error {
 	s.Exercise = w.Exercise
 	s.Target = target
 	s.Load = load
-	s.Progression = w.Progression
 	return nil
 }
 
@@ -381,6 +623,19 @@ type memberTypeProbe struct {
 	Type string `json:"type"`
 }
 
+// conditionalWire is Conditional's wire shape:
+// {"type":"conditional","cond":BoolExpr,"then":Member,"else":Member}.
+// Cond is a RawMessage (not BoolExpr directly) because BoolExpr is now
+// an interface — encoding/json can decode into a field's concrete
+// MarshalJSON automatically, but never into an interface-typed field
+// without an explicit dispatch, same reasoning as Then/Else.
+type conditionalWire struct {
+	Type string          `json:"type"`
+	Cond json.RawMessage `json:"cond"`
+	Then json.RawMessage `json:"then"`
+	Else json.RawMessage `json:"else"`
+}
+
 func decodeMember(raw json.RawMessage) (Member, error) {
 	var probe memberTypeProbe
 	if err := json.Unmarshal(raw, &probe); err != nil {
@@ -405,9 +660,43 @@ func decodeMember(raw json.RawMessage) (Member, error) {
 			return nil, fmt.Errorf("member: %w", err)
 		}
 		return g, nil
+	case "conditional":
+		var w conditionalWire
+		if err := json.Unmarshal(raw, &w); err != nil {
+			return nil, fmt.Errorf("member: %w", err)
+		}
+		cond, err := decodeBoolExpr(w.Cond)
+		if err != nil {
+			return nil, fmt.Errorf("member: conditional.cond: %w", err)
+		}
+		then, err := decodeMember(w.Then)
+		if err != nil {
+			return nil, fmt.Errorf("member: conditional.then: %w", err)
+		}
+		els, err := decodeMember(w.Else)
+		if err != nil {
+			return nil, fmt.Errorf("member: conditional.else: %w", err)
+		}
+		return Conditional{Cond: cond, Then: then, Else: els}, nil
 	default:
 		return nil, fmt.Errorf("member: unknown type %q", probe.Type)
 	}
+}
+
+func (c Conditional) MarshalJSON() ([]byte, error) {
+	cond, err := json.Marshal(c.Cond)
+	if err != nil {
+		return nil, fmt.Errorf("conditional: cond: %w", err)
+	}
+	then, err := json.Marshal(c.Then)
+	if err != nil {
+		return nil, fmt.Errorf("conditional: then: %w", err)
+	}
+	els, err := json.Marshal(c.Else)
+	if err != nil {
+		return nil, fmt.Errorf("conditional: else: %w", err)
+	}
+	return json.Marshal(conditionalWire{Type: "conditional", Cond: cond, Then: then, Else: els})
 }
 
 type groupWire struct {

@@ -46,8 +46,7 @@
                         "label": "top",
                         "exercise": "LegExtension",
                         "target": { "kind": "reps", "expr": { "type": "number", "value": 12 } },
-                        "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.leg_ext.weight" }, "unit": "kg" },
-                        "progression": { "scheme": "double", "target": "top", "args": [8, 15, 5] }
+                        "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.leg_ext.weight" }, "unit": "kg" }
                       },
                       {
                         "type": "setRef",
@@ -75,6 +74,30 @@
                             "right": { "type": "path", "path": "tm.leg_ext.weight" }
                           },
                           "unit": "kg"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "progress": {
+                "stmts": [
+                  {
+                    "type": "if",
+                    "cond": {
+                      "type": "comparison",
+                      "op": ">=",
+                      "left": { "type": "log", "label": "top", "field": "reps" },
+                      "right": { "type": "number", "value": 15 }
+                    },
+                    "then": [
+                      {
+                        "type": "assign",
+                        "path": "tm.leg_ext.weight",
+                        "expr": {
+                          "type": "add",
+                          "left": { "type": "path", "path": "tm.leg_ext.weight" },
+                          "right": { "type": "number", "value": 5 }
                         }
                       }
                     ]

@@ -12,7 +12,10 @@ block main = {
                 set _   = 1+ @ 0.8 * top.weight
                 set _   = 1+ @ 0.6 * top.weight
             }
-            progress = double(ds.top, 8, 15, 5)
+            progress = {
+                if ds.top.reps >= 15 then
+                    tm.leg_ext.weight += 5
+            }
         }
         legext;
     }

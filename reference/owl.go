@@ -3,18 +3,29 @@ package owl
 import (
 	"encoding/json"
 	"errors"
+
+	"github.com/open-workout/owl/reference/internal/compiler"
+	"github.com/open-workout/owl/reference/internal/lexer"
+	"github.com/open-workout/owl/reference/internal/parser"
 )
 
-// ErrNotImplemented is returned by every function in this file. This
-// package currently only defines the canonical-form wire types
-// (types.go, codec.go) — the lexer/parser/compiler/resolve/progress
-// logic itself hasn't been written yet. See ../README.md § Status.
+// ErrNotImplemented is returned by Resolve and Progress, which aren't
+// implemented yet — see ../README.md § Status. Compile (lexer -> parser
+// -> compiler) is implemented.
 var ErrNotImplemented = errors.New("owl: not implemented yet")
 
 // Compile parses OWL source and produces its canonical form
 // (spec/canonical-form.md). It does not depend on any athlete's state.
 func Compile(source string) (*Program, error) {
-	return nil, ErrNotImplemented
+	toks, err := lexer.Lex(source)
+	if err != nil {
+		return nil, err
+	}
+	ast, err := parser.Parse(toks)
+	if err != nil {
+		return nil, err
+	}
+	return compiler.Compile(ast)
 }
 
 // Cursor selects which occurrence of a Program to resolve — see
@@ -54,9 +65,9 @@ type SetLog struct {
 	PerformedLoad   *float64
 }
 
-// Progress evaluates every progressable SetRef a session touched against
-// what was logged, and returns the athlete's updated state — see
-// spec/semantics/progression.md, spec/stdlib/schemes.md.
+// Progress runs each exercise's `progress` code against what was logged
+// for that session, and returns the athlete's updated state — see
+// spec/semantics/progression.md.
 func Progress(program *Program, state AthleteState, log []SetLog) (AthleteState, error) {
 	return AthleteState{}, ErrNotImplemented
 }

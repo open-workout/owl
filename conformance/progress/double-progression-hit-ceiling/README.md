@@ -6,8 +6,13 @@ but here the athlete already has a stored `tm.squat.weight` (100) and
 `resolution.md` §2's precedence rule: a stored binding is authoritative
 once one exists).
 
-`log.json` records the top set completed at 12 reps @ 100kg — 12 is the
-rule's `hi` bound (`double(top_set, 8, 12, 5)`), so per
-[`stdlib/schemes.md`](../../../spec/stdlib/schemes.md)'s `double`
-algorithm step 3 (rep ceiling met): weight increases by the rule's
-`increment` (5) to 105, and reps reset to `lo` (8).
+`log.json` records the top set completed at 12 reps @ 100kg. `squat`'s
+`progress` block (see `canonical.json`) reads that as: outer floor gate
+`top_set.reps >= 8` — true, so `tm.squat.reps`/`tm.squat.weight` get
+copied from the log (12, 100); inner ceiling check
+`tm.squat.reps >= 12` — true, so `tm.squat.weight += 5` (105) and
+`tm.squat.reps = 8`, the reset floor. This is the same "hold / bump reps
+/ bump weight and reset" logic the old built-in `double` scheme used to
+encode positionally; see
+[`spec/semantics/progression.md`](../../../spec/semantics/progression.md)
+§2 for why it's ordinary code now instead.

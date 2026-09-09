@@ -21,10 +21,13 @@ jobs:
       - run: go vet ./...
       - run: go build ./...
       - run: go run ./cmd/owlc validate-fixtures ..
-      # TODO: once Compile/Resolve/Progress are implemented, replace the
-      # validate-fixtures step above with a job that actually runs them
-      # against every conformance/{parse,resolve,progress}/ fixture and
-      # diffs the result against expected.json — validate-fixtures only
-      # checks the fixtures are structurally well-formed against the
-      # schemas in spec/ and conformance/schema/, not that they're the
-      # correct output of a real implementation.
+      - run: go test ./...
+      # go test runs Compile against every conformance/parse/* fixture
+      # (compile_test.go) and diffs the result against expected.json as
+      # Go values — the real correctness check validate-fixtures alone
+      # can't do (it only checks fixtures are structurally well-formed,
+      # not that they're what a real implementation produces). Keeping
+      # both: validate-fixtures catches a malformed fixture, go test
+      # catches a wrong implementation.
+      # TODO: once Resolve/Progress are implemented, extend go test's
+      # coverage to conformance/{resolve,progress}/ the same way.

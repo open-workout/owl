@@ -83,6 +83,7 @@
               {
                 "type": "conditional",
                 "cond": {
+                  "type": "comparison",
                   "op": "<",
                   "left": { "type": "path", "path": "tm.variable" },
                   "right": { "type": "number", "value": 15 }

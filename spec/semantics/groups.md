@@ -80,7 +80,16 @@ modes for the same reason — see §1.)
 ```owl
 exercise back_squat = $BarbellBackSquat {
     set work = tm.squat.reps @ 0.8 * tm.squat.weight
-    progress = double(work, 3, 5, 5)
+    progress = {
+        if work.reps >= 3 then
+            tm.squat.reps = work.reps
+            tm.squat.weight = work.weight
+            if tm.squat.reps >= 5 then
+                tm.squat.weight += 5
+                tm.squat.reps = 3
+            else
+                tm.squat.reps += 1
+    }
 }
 ```
 
@@ -93,9 +102,10 @@ members: sets }`, so that a later bare-name statement (`back_squat;`)
 compiles to a `Ref{ name: "back_squat" }` member that resolves to this
 `body` — the sets are declared once, not duplicated at every use site
 (e.g. inside `superset(bench, row)`, `bench`/`row` are `Ref`s into the same
-declarations). A `progress` line does not itself produce a `Group` — it
-attaches a `ProgressionRule` (see
-[`progression.md`](./progression.md)) to the `SetRef` it names.
+declarations). A `progress` line does not itself produce a `Group` or
+attach to any one `SetRef` — it compiles to the exercise declaration's
+own `progress` field (see [`progression.md`](./progression.md)), a
+single code block covering the whole exercise.
 
 ### 3.2 `superset(a, b, …)` → `superset` Group
 
@@ -212,6 +222,26 @@ atomic: false, members: [copy of `leader`'s compiled body] × 5 }`. Same
 repetition-macro treatment as `rounds`, just with a fixed body instead of a
 per-lap substitution.
 
+### 3.7a `(stmt, stmt, …)*N` → repeated sequential Group, anonymous body
+
+```owl
+(cardio_rower, rest(2min))*5
+```
+
+Same macro as §3.7, just with an inline, anonymous statement list in
+place of a declared name — there is nothing to name when the body is
+only ever used at this one repeat site. Compiles to `Group{ interleave:
+sequential, rest: {single}, termination: count(5), atomic: false,
+members: [copy of the compiled `(cardio_rower, rest(2min))` body] × 5 }`,
+where the inner body is compiled exactly as any other statement list
+(§3.1-style): `cardio_rower` → `Ref{name: "cardio_rower"}`, and the bare
+`rest(2min)` — since it's not a `supersetArg`'s per-pair rest override
+(§3.2) — sets that inner Group's own `rest` to `{single: 2min}` rather
+than becoming a member of its own. The same bare-`rest(d)`-sets-the-
+enclosing-group's-`rest` reading applies wherever a `restStmt` appears
+directly in a sequential statement list, e.g. `SE_lower; rest(1d);
+SE_upper;` at block level.
+
 ### 3.8 `dropset` declaration → `dropset` Group
 
 ```owl
@@ -221,7 +251,12 @@ exercise legext = $LegExtension {
         set _   = 1+ @ 0.8 * top.weight     # to failure, 80% of top
         set _   = 1+ @ 0.6 * top.weight     # to failure, 60% of top
     }
-    progress = double(ds.top, 8, 15, 5)
+    progress = {
+        if ds.top.reps >= 15 then
+            tm.leg_ext.weight += 5
+        else if ds.top.reps >= 8 then
+            tm.leg_ext.weight += 2.5
+    }
 }
 ```
 
@@ -236,11 +271,16 @@ top.weight` compiles to `0.8 * tm.leg_ext.weight`, a plain composed `Expr`
 with no new node type.
 
 Naming the dropset (`ds`) makes it a scope: `top` is only reachable from
-outside as `ds.top` (as `progress`'s target argument does above) — see
-`grammar.ebnf`'s note under `dottedPath`. `progress`'s rule still attaches
-directly to the `top` `SetRef` inside `ds`'s `Group.members`, exactly as
-it would for a flat `set` (§3.1) — a dropset changes where a set sits
-structurally, not how progression attaches to it.
+outside as `ds.top` (as `progress`'s `ds.top.reps` read does above) — see
+`grammar.ebnf`'s note under `dottedPath`. That same `ds.top.reps` inside
+`progress` means something different than `top.weight` would mean inside
+one of `ds`'s own `set` lines: there it's the *logged* value for `top`,
+not a prescribed-formula substitution — see
+[`targets-loads.md`](./targets-loads.md) §4's note and
+[`progression.md`](./progression.md) §2. A dropset changes where a set
+sits structurally, not which sets `progress` can read from — the
+exercise's one `progress` block can reference any of its sets, dropset
+member or not.
 
 **Sugar**: `drop(f1, f2, …)` on a `set` line desugars to the same
 `dropset` `Group` shape, anonymously:
@@ -248,7 +288,10 @@ structurally, not how progression attaches to it.
 ```owl
 exercise legext = $LegExtension {
     set top = 12 @ tm.leg_ext.weight drop(0.8, 0.6)   # top + two auto-drops to failure
-    progress = double(top, 8, 15, 5)
+    progress = {
+        if top.reps >= 15 then
+            tm.leg_ext.weight += 5
+    }
 }
 ```
 
@@ -259,9 +302,9 @@ but the dropset is **not** named, so it gets no entry in
 `ExerciseDecl.groups` and is instead embedded directly, inline, in the
 exercise's `body` at the position `top` was declared (the same treatment
 a flat `set` already gets — see §3.1). Because there's no name to
-qualify with, `top` stays reachable directly (`progress = double(top, 8,
-15, 5)`, not `double(ds.top, ...)`) — sugar keeps the flat exercise-level
-namespace; an explicit name always introduces a nested one.
+qualify with, `top` stays reachable directly (`top.reps`, not
+`ds.top.reps`) — sugar keeps the flat exercise-level namespace; an
+explicit name always introduces a nested one.
 
 `drop(...)`'s factors are always multipliers on the annotated set's own
 `load` — there's no attested syntax for drop-setting a load-less

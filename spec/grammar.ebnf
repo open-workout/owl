@@ -18,7 +18,13 @@
    proposed but not yet attested (dropset, restpause, explicit
    superset rest-args), and spec/semantics/conditionals.md for the
    `if`/`then`/`else` family's compiled shape and its own open
-   questions (a `setDecl` conditional branch, and `!=`).
+   questions (a `setDecl` conditional branch).
+
+   `progress` is ordinary code, not a call into a closed set of named
+   stdlib schemes — see spec/semantics/progression.md. It reads the
+   session log via `<label>.<field>` (only meaningful inside a
+   progressBody — see progressDecl below) and writes `state` paths by
+   assignment, with its own `if`/`then`/`else`.
    ============================================================ *)
 
 
@@ -87,13 +93,33 @@ exerciseDecl   ::= 'exercise' IDENT '=' CATALOG_NAME '{' exerciseItem* '}'
 exerciseItem   ::= ( setDecl | progressDecl | dropsetDecl | condExerciseItem ) ';'?
 
 setDecl        ::= 'set' ( IDENT | '_' ) '=' quantity ( '@' quantity )? dropModifier?
-progressDecl   ::= 'progress' '=' IDENT '(' argList? ')'
+
+(* `progress` is at most one per exercise (spec/semantics/progression.md
+   §2), and is itself a small block of code — assignments to `state`
+   paths, guarded by its own `if`/`then`/`else` — rather than a call into
+   a named scheme. Each branch is an (unbraced) statement list that runs
+   until 'else' or the enclosing '}'; 'else' may itself be a nested
+   progressIf ("else if …") or a final statement list. *)
+progressDecl   ::= 'progress' '=' progressBody
+progressBody   ::= '{' progressStmt* '}'
+progressStmt   ::= ( progressAssign | progressIf ) ';'?
+progressAssign ::= dottedPath assignOp expr
+progressIf     ::= 'if' condExpr 'then' ':'? progressStmt*
+                    ( 'else' ( progressIf | progressStmt* ) )?
+
+(* `path op= expr` (op one of '+','-','*','/') desugars to
+   `path = path op expr` at parse time — sugar, not a new
+   canonical-form shape; see spec/semantics/progression.md §2.
+   Scoped to progressAssign only: a stateBinding's '=' is a one-time
+   seed formula and assignStmt's '=' names a group expression, neither
+   has a "current value" a mutation would read. *)
+assignOp       ::= '=' | '+=' | '-=' | '*=' | '/='
 
 (* A named dropset groups a top set with its drop-sets as one atomic
    unit (see spec/semantics/groups.md §3.8). Only `setDecl`s are valid
    inside — dropsets don't nest, and don't carry their own `progress`
-   (a `progressDecl` referencing into a dropset's sets sits alongside
-   it, at the exerciseItem level — see dropsetDecl's example). *)
+   (the exercise's single `progressDecl` reads any of its member sets'
+   logs by qualified label — see dropsetDecl's example). *)
 dropsetDecl    ::= 'dropset' IDENT '=' '{' ( setDecl ';'? )* '}'
 
 (* Sugar: `drop(f1, f2, ...)` on a set line desugars into an anonymous
@@ -116,15 +142,22 @@ stmt           ::= assignStmt
                  | ref
 
 assignStmt     ::= IDENT '=' groupExpr
-repeatStmt     ::= ref '*' NUMBER
+
+(* A repeatable is either a bare declared name (§3.7 of groups.md: `N`
+   copies of that name's own compiled body) or an inline, anonymous
+   statement list (the same repetition, just with nothing declared to
+   name) — e.g. `(cardio_rower, rest(2min))*5`. *)
+repeatStmt     ::= repeatable '*' NUMBER
+repeatable     ::= ref
+                 | '(' stmt ( ',' stmt )* ')'
+
 restStmt       ::= 'rest' '(' duration ')'
 ref            ::= IDENT
 
 
 (* ---- Conditionals ----
    `if cond then: A else B` picks between two alternatives of whatever
-   item list it appears in — an exerciseItem (set/progress selection,
-   if-then-else-for-progress.owl), a dayItem (exercise/group selection,
+   item list it appears in — a dayItem (exercise/group selection,
    if-then-else.owl), a blockItem (day selection,
    if-then-else-for-days.owl), or a topLevelItem (block selection,
    if-then-else-for-blocks.owl). `cond` reads `state` (a per-athlete
@@ -133,15 +166,31 @@ ref            ::= IDENT
    branches survive into canonical form and `resolve` picks one. See
    spec/semantics/conditionals.md.
 
+   `condExerciseItem` is the exception: with `progress` now a single
+   code block per exercise (see progressDecl above) rather than a
+   scheme call, there's no longer an attested reason to wrap two whole
+   exerciseItems in a conditional — a `progressIf` inside one `progress`
+   block covers that, and a conditional `setDecl`/`dropsetDecl` remains
+   unattested (spec/semantics/conditionals.md's open questions). The
+   production still parses, for symmetry with the other three levels,
+   but the compiler rejects it.
+
+   The same `condExpr` is reused by `progressIf` above. `and`/`or` bind
+   left-to-right within their own precedence level, `and` tighter than
+   `or`; parenthesize to mix them unambiguously.
+
    The trailing ':' after 'then' is attested both present
    (if-then-else.owl) and absent (if-then-else-for-progress.owl) — purely
    cosmetic, like the optional ';' item separator. 'else' itself is
-   required: no attested example omits it. *)
+   required at these four levels: no attested example omits it
+   (`progressIf`, above, is the one place `else` is optional). *)
 
-condExpr       ::= expr relOp expr
-relOp          ::= '<' | '>' | '<=' | '>=' | '=='
-   (* '!=' is a natural, unattested extension — see conditionals.md's
-      open questions. *)
+condExpr       ::= condOr
+condOr         ::= condAnd ( 'or' condAnd )*
+condAnd        ::= condAtom ( 'and' condAtom )*
+condAtom       ::= expr relOp expr
+                 | '(' condExpr ')'
+relOp          ::= '<' | '>' | '<=' | '>=' | '==' | '!='
 
 condExerciseItem ::= 'if' condExpr 'then' ':'? exerciseItem 'else' exerciseItem
 condDayItem      ::= 'if' condExpr 'then' ':'? dayItem      'else' dayItem
@@ -181,9 +230,15 @@ inlineCall     ::= CATALOG_NAME '(' quantity ( '@' quantity )? ')'
 
 (* ---------------- Expressions & quantities ---------------- *)
 
+(* `quantity`'s trailing '+' (the AMRAP-style "or more" / "to failure"
+   marker) is a different production than the '+' inside `expr` below —
+   `quantity` wraps a `term`, not an `expr`, so the two never collide:
+   `tm.squat.reps+` is quantity's marker on a bare `term`; `weight + 5`
+   is expr's binary addition. *)
 quantity       ::= term '+'?
-expr           ::= term
-term           ::= factor ( '*' factor )*
+
+expr           ::= term ( ( '+' | '-' ) term )*
+term           ::= factor ( ( '*' | '/' ) factor )*
 factor         ::= NUMBER unit?
                  | dottedPath
                  | catalogFieldRef
@@ -193,22 +248,36 @@ dottedPath     ::= IDENT ( '.' IDENT )*
 catalogFieldRef::= CATALOG_NAME '.' IDENT
 
 (* `dottedPath` is overloaded by design, resolved by the compiler's
-   scope lookup rather than by a separate grammar rule: a leading
-   segment naming a `state` binding root (e.g. `tm`) makes it a state
-   path (`tm.squat.weight`); a leading segment naming an earlier `set`
-   label in the same exercise/dropset (e.g. `top`) makes it a local
-   set-field reference (`top.weight`, only `.weight` attested — see
-   spec/semantics/targets-loads.md §4); a leading segment naming a
-   `dropset` (e.g. `ds`) qualifies a label declared inside it, valid
-   wherever a set label is expected — e.g. `progress = double(ds.top,
-   ...)`. It is a compile error for the leading segment to resolve to
-   none of these. *)
+   scope lookup rather than by a separate grammar rule — and, uniquely,
+   by *where* it appears (inside a `set`'s target/load, vs. inside a
+   `progressBody`), not scope lookup alone:
+
+   - Everywhere except inside a `progressBody`: a leading segment naming
+     a `state` binding root (e.g. `tm`) makes it a state path
+     (`tm.squat.weight`); a leading segment naming an earlier `set`
+     label in the same exercise/dropset (e.g. `top`) makes it a local
+     set-field reference — the *prescribed* target/load formula
+     (`top.weight`, only `.weight` attested — see
+     spec/semantics/targets-loads.md §4); a leading segment naming a
+     `dropset` (e.g. `ds`) qualifies a label declared inside it.
+   - Inside a `progressBody`: a leading segment naming a `set` label in
+     the enclosing exercise (bare, or dropset-qualified, e.g.
+     `top_set.reps`, `ds.top.weight`) instead reads what was actually
+     *logged* for that set this session — a different value from the
+     same label's meaning outside a progressBody. A bare `tm.*` path
+     still means the current `state` value, unchanged. See
+     spec/semantics/progression.md §2.
+
+   It is a compile error for the leading segment to resolve to none of
+   these. *)
 
 (* 'm' is deliberately overloaded (minutes vs. meters). It is
    resolved by grammar position, never by the lexer: 'm' inside a
    `duration` is minutes; 'm' inside a `quantity`'s `unit` is
    meters. The two nonterminals never appear in the same slot. *)
 unit           ::= 'kg' | 'lb' | 'm' | 'km' | 's' | 'min' | 'h' | 'd'
-duration       ::= NUMBER ( 's' | 'm' | 'h' | 'd' )
-
-argList        ::= expr ( ',' expr )*
+duration       ::= NUMBER ( 's' | 'm' | 'min' | 'h' | 'd' )
+   (* 'm' and 'min' are both accepted spellings for minutes here — the
+      same alternate spelling `unit` already offers, for consistency.
+      'm' inside `unit`, by contrast, means meters (see the note above);
+      the two productions are never used in the same slot. *)
