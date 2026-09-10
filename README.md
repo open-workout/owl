@@ -21,7 +21,10 @@ block leader = {
     day SE_lower = {
         exercise squat = $BarbellBackSquat {
             set top_set = tm.squat.reps+ @ tm.squat.weight
-            progress    = double(top_set, 8, 12, 5)
+            progress = {
+                if top_set.reps >= 12 then
+                    tm.squat.weight += 5
+            }
         }
         squat;
     }
