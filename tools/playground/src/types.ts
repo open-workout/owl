@@ -19,4 +19,6 @@ export interface Pane {
   id: string;
   tabs: Tab[];
   activeTabIndex: number;
+  /** Relative width weight; weights across all panes always sum to 100. */
+  size: number;
 }

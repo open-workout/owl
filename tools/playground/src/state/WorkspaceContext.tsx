@@ -9,13 +9,20 @@ import type { FileKind, Pane, Tab, WorkspaceFile } from "../types";
 import { defaultContentForKind } from "../utils/fileTypes";
 
 const MAX_PANES = 3;
+export const MIN_PANE_SIZE = 15;
 
 function makeId(): string {
   return crypto.randomUUID();
 }
 
-function makePane(): Pane {
-  return { id: makeId(), tabs: [], activeTabIndex: -1 };
+function makePane(size: number): Pane {
+  return { id: makeId(), tabs: [], activeTabIndex: -1, size };
+}
+
+/** Reset every pane to an equal share of the row (weights summing to 100). */
+function withEqualSizes(panes: Pane[]): Pane[] {
+  const size = 100 / panes.length;
+  return panes.map((pane) => ({ ...pane, size }));
 }
 
 interface WorkspaceState {
@@ -25,7 +32,7 @@ interface WorkspaceState {
 }
 
 function initialState(): WorkspaceState {
-  const pane = makePane();
+  const pane = makePane(100);
   return { files: [], panes: [pane], focusedPaneId: pane.id };
 }
 
@@ -39,7 +46,8 @@ type Action =
   | { type: "ADD_PANE" }
   | { type: "REMOVE_PANE"; paneId: string }
   | { type: "SET_FOCUSED_PANE"; paneId: string }
-  | { type: "SET_ACTIVE_TAB"; paneId: string; tabIndex: number };
+  | { type: "SET_ACTIVE_TAB"; paneId: string; tabIndex: number }
+  | { type: "RESIZE_PANES"; leftPaneId: string; rightPaneId: string; leftSize: number; rightSize: number };
 
 function tabsForFile(kind: FileKind, fileId: string): Tab[] {
   return kind === "md"
@@ -135,13 +143,14 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
 
     case "ADD_PANE": {
       if (state.panes.length >= MAX_PANES) return state;
-      const pane = makePane();
-      return { ...state, panes: [...state.panes, pane], focusedPaneId: pane.id };
+      const newPane = makePane(0);
+      const panes = withEqualSizes([...state.panes, newPane]);
+      return { ...state, panes, focusedPaneId: newPane.id };
     }
 
     case "REMOVE_PANE": {
       if (state.panes.length <= 1) return state;
-      const panes = state.panes.filter((pane) => pane.id !== action.paneId);
+      const panes = withEqualSizes(state.panes.filter((pane) => pane.id !== action.paneId));
       const focusedPaneId =
         state.focusedPaneId === action.paneId ? panes[0].id : state.focusedPaneId;
       return { ...state, panes, focusedPaneId };
@@ -155,6 +164,15 @@ function reducer(state: WorkspaceState, action: Action): WorkspaceState {
         pane.id === action.paneId ? { ...pane, activeTabIndex: action.tabIndex } : pane,
       );
       return { ...state, panes, focusedPaneId: action.paneId };
+    }
+
+    case "RESIZE_PANES": {
+      const panes = state.panes.map((pane) => {
+        if (pane.id === action.leftPaneId) return { ...pane, size: action.leftSize };
+        if (pane.id === action.rightPaneId) return { ...pane, size: action.rightSize };
+        return pane;
+      });
+      return { ...state, panes };
     }
 
     default:
@@ -176,6 +194,7 @@ interface WorkspaceContextValue {
   removePane: (paneId: string) => void;
   setFocusedPane: (paneId: string) => void;
   setActiveTab: (paneId: string, tabIndex: number) => void;
+  resizePanes: (leftPaneId: string, rightPaneId: string, leftSize: number, rightSize: number) => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -214,6 +233,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     (paneId: string, tabIndex: number) => dispatch({ type: "SET_ACTIVE_TAB", paneId, tabIndex }),
     [],
   );
+  const resizePanes = useCallback(
+    (leftPaneId: string, rightPaneId: string, leftSize: number, rightSize: number) =>
+      dispatch({ type: "RESIZE_PANES", leftPaneId, rightPaneId, leftSize, rightSize }),
+    [],
+  );
 
   const value: WorkspaceContextValue = {
     ...state,
@@ -227,6 +251,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     removePane,
     setFocusedPane,
     setActiveTab,
+    resizePanes,
   };
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
