@@ -37,7 +37,7 @@ built out: nothing needs them yet.
 | `bindings/` | Per-language wrappers around `reference/`. Placeholders — don't build speculatively. |
 | `examples/` | Real `.owl` programs, for reading. |
 | `docs/` | User-facing tutorials. Not written yet. |
-| `tools/playground/` | Web REPL. Not built yet, low priority. |
+| `tools/playground/` | Browser IDE for OWL projects (file tree, tabs, split view). MVP scaffold — no compiler wired in yet. |
 | `grammar/` | Deliberately empty — no parser-generator artifact, since `reference/` hand-writes its parser. |
 
 ## `reference/` — where the actual code lives
@@ -65,6 +65,23 @@ not more parsing, and the next real chunk of work.
 A hand-written recursive-descent parser is the deliberate choice over a
 parser generator (ANTLR/pigeon/etc.) — `grammar.ebnf`'s productions don't
 need one, and it keeps the toolchain to just Go.
+
+## `tools/playground/` — workout IDE (MVP)
+
+A React + TypeScript + Vite browser app: file tree, tabs (opening a
+`.md` file shows two tabs — source and rendered preview), and up to
+three split panes. All state is in-memory (React), nothing persists
+across reloads, and **no compiler is wired in** — `.json` files are
+just files a user creates, not the output of compiling an `.owl` file.
+A new project's file tree starts empty; there is deliberately no
+seeding from this repo's `examples/`.
+
+The top bar has two intentionally non-functional stubs — "Publish"
+(future: push the project to a not-yet-built marketplace) and "Send to
+Phone" (future: hand the project to the phone app via a QR code) — so
+their UI shape exists ahead of the backend work they depend on. See
+[`tools/playground/README.md`](tools/playground/README.md) for the
+full current scope and how to run it.
 
 ## Building and testing
 
