@@ -6,6 +6,20 @@ on:
   pull_request:
 
 jobs:
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      playground: ${{ steps.filter.outputs.playground }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            playground:
+              - 'tools/playground/**'
+
   reference-go:
     name: Build reference/ + validate conformance fixtures
     runs-on: ubuntu-latest
@@ -34,6 +48,8 @@ jobs:
 
   playground-web:
     name: Build tools/playground/
+    needs: changes
+    if: needs.changes.outputs.playground == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
