@@ -1,0 +1,19 @@
+units = "kg"
+
+block main = {
+    day day1 = {
+        partA = 5*emom(1min){
+            $KettlebellSwing(15 @ 24kg)
+            $Burpee(10)
+        }
+
+        partB = amrap(10min){
+            $WallBall(15 @ 9kg)
+            $PullUp(10)
+        }
+
+        partA;
+        rest(2min);
+        partB;
+    }
+}

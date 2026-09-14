@@ -103,11 +103,21 @@
     "atomic": false,
     "members": [
       {
-        "type": "setRef",
-        "label": "top_set",
-        "exercise": "BarbellBackSquat",
-        "target": { "kind": "reps", "value": 8 },
-        "load": { "kind": "weight", "value": 60, "unit": "kg" }
+        "type": "group",
+        "kind": "straight",
+        "interleave": "sequential",
+        "rest": { "mode": "single" },
+        "termination": { "mode": "count", "n": 1 },
+        "atomic": false,
+        "members": [
+          {
+            "type": "setRef",
+            "label": "top_set",
+            "exercise": "BarbellBackSquat",
+            "target": { "kind": "reps", "value": 8 },
+            "load": { "kind": "weight", "value": 60, "unit": "kg" }
+          }
+        ]
       }
     ]
   }

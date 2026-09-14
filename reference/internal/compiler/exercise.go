@@ -8,14 +8,32 @@ import (
 	"github.com/open-workout/owl/reference/internal/parser"
 )
 
-// dropsetBuild is a dropset (named, from an explicit `dropset` decl, or
-// anonymous, from `drop(...)` sugar) under construction. Its member
-// SetRefs are tracked by pointer for the same reason scope's are — a
-// `progress` line naming one of them attaches by mutating the pointee.
+// restpauseRestDuration is the fixed intra-burst rest for the explicit
+// `restpause NAME = { ... }` declaration (spec/semantics/groups.md
+// §3.9) — unlike the `rest_pause(duration, ...)` sugar, the explicit
+// form doesn't carry its own duration, so this is the one place it's
+// decided.
+var restpauseRestDuration = ir.Duration{Value: 15, Unit: "s"}
+
+// dropsetBuild is an atomic sequential group (a dropset or a restpause
+// group — see `kind`) under construction, named (from an explicit
+// `dropset`/`restpause` decl) or anonymous (from `drop(...)`/
+// `rest_pause(...)` sugar). Its member SetRefs are tracked by pointer
+// for the same reason scope's are — a `progress` line naming one of
+// them attaches by mutating the pointee. Both constructs share this one
+// builder (and `scope`'s `dropsets` map/`declareDropset`/
+// `lookupDropset`) since they compile to the identical `Group` shape,
+// differing only in `kind` and `rest.single`'s duration
+// (spec/semantics/groups.md §2).
 type dropsetBuild struct {
-	name    string // "" for anonymous drop(...) sugar
-	sets    []*ir.SetRef
-	byLabel map[string]*ir.SetRef
+	name string // "" for anonymous sugar
+	kind string // "dropset" | "restpause"
+	// restDuration is the rest.single duration for a "restpause" build;
+	// unused (nil means "omitted", per dropset's existing 0-value rest)
+	// for "dropset".
+	restDuration *ir.Duration
+	sets         []*ir.SetRef
+	byLabel      map[string]*ir.SetRef
 }
 
 func buildDropsetGroup(db *dropsetBuild) ir.Group {
@@ -24,13 +42,14 @@ func buildDropsetGroup(db *dropsetBuild) ir.Group {
 		members[i] = *p
 	}
 	return ir.Group{
-		Kind: "dropset", Interleave: "sequential", Rest: ir.SingleRest{},
+		Kind: db.kind, Interleave: "sequential", Rest: ir.SingleRest{Duration: db.restDuration},
 		Termination: ir.CountTermination{N: len(members)}, Atomic: true, Members: members,
 	}
 }
 
 // bodyItem is one position in an exercise's declaration-order body list:
-// either a flat set or a dropset (named or anonymous), never both.
+// either a flat set or a dropset/restpause group (named or anonymous),
+// never both.
 type bodyItem struct {
 	set     *ir.SetRef
 	dropset *dropsetBuild
@@ -66,6 +85,13 @@ func (c *compiler) compileExerciseDecl(ed *parser.ExerciseDecl, parent *scope) (
 			}
 		case *parser.DropsetDecl:
 			db, err := c.buildDropsetDecl(item, sc, ed.Catalog)
+			if err != nil {
+				return nil, err
+			}
+			namedDropsets = append(namedDropsets, db)
+			body = append(body, bodyItem{dropset: db})
+		case *parser.RestpauseDecl:
+			db, err := c.buildRestpauseDecl(item, sc, ed.Catalog)
 			if err != nil {
 				return nil, err
 			}
@@ -118,13 +144,13 @@ func (c *compiler) compileExerciseDecl(ed *parser.ExerciseDecl, parent *scope) (
 	return &ir.ExerciseDecl{Name: ed.Name, Catalog: ed.Catalog, Sets: sets, Groups: groups, Body: bodyGroup, Progress: progress}, nil
 }
 
-// buildSetDecl compiles one `set` line. If it carries a `drop(...)`
-// modifier, it returns (nil, dropsetBuild) instead of (*ir.SetRef, nil)
-// — the caller places the whole anonymous dropset at this body
-// position (groups.md §3.8's sugar rule) rather than the bare set.
-// Either way, the annotated set's own label is registered directly in
-// sc (not nested under a dropset name), since sugar keeps the flat
-// exercise-level namespace.
+// buildSetDecl compiles one `set` line. If it carries a `drop(...)` or
+// `rest_pause(...)` modifier, it returns (nil, dropsetBuild) instead of
+// (*ir.SetRef, nil) — the caller places the whole anonymous
+// dropset/restpause group at this body position (groups.md §3.8/§3.9's
+// sugar rules) rather than the bare set. Either way, the annotated
+// set's own label is registered directly in sc (not nested under a
+// group name), since sugar keeps the flat exercise-level namespace.
 func (c *compiler) buildSetDecl(sd *parser.SetDecl, sc *scope, catalog string) (*ir.SetRef, *dropsetBuild, error) {
 	target, err := c.compileTarget(sd.Target, sc)
 	if err != nil {
@@ -140,27 +166,50 @@ func (c *compiler) buildSetDecl(sd *parser.SetDecl, sc *scope, catalog string) (
 	ref := &ir.SetRef{Label: sd.Label, Exercise: catalog, Target: target, Load: load}
 	sc.declareSet(sd.Label, ref)
 
-	if sd.Drop == nil {
+	switch {
+	case sd.Drop != nil:
+		wl, ok := load.(ir.WeightLoad)
+		if !ok {
+			return nil, nil, fmt.Errorf("%s: drop(...) requires the annotated set to have a load (spec/semantics/groups.md §3.8)", sd.Pos)
+		}
+		db := &dropsetBuild{kind: "dropset", byLabel: map[string]*ir.SetRef{}}
+		db.sets = append(db.sets, ref)
+		if sd.Label != "" {
+			db.byLabel[sd.Label] = ref
+		}
+		for _, f := range sd.Drop.Factors {
+			auto := &ir.SetRef{
+				Exercise: catalog,
+				Target:   ir.RepsTarget{Expr: ir.NumberExpr{Value: 1}, Plus: true},
+				Load:     ir.WeightLoad{Expr: ir.MulExpr{Left: ir.NumberExpr{Value: f}, Right: wl.Expr}, Unit: wl.Unit},
+			}
+			db.sets = append(db.sets, auto)
+		}
+		return nil, db, nil
+	case sd.RestPause != nil:
+		if sd.RestPause.Bursts < 1 {
+			return nil, nil, fmt.Errorf("%s: rest_pause(...) burst count must be at least 1", sd.Pos)
+		}
+		d := toIRDuration(sd.RestPause.Duration)
+		db := &dropsetBuild{kind: "restpause", restDuration: &d, byLabel: map[string]*ir.SetRef{}}
+		db.sets = append(db.sets, ref)
+		if sd.Label != "" {
+			db.byLabel[sd.Label] = ref
+		}
+		for i := 0; i < sd.RestPause.Bursts; i++ {
+			// Same target/load as the annotated set — rest-pause holds
+			// the load fixed across bursts (spec/semantics/groups.md
+			// §2), unlike dropset's descending per-burst loads. Reusing
+			// the same Target/Load values is safe: Group/Member trees
+			// are never mutated after construction (see expr.go's note
+			// on loadExprOf).
+			auto := &ir.SetRef{Exercise: catalog, Target: target, Load: load}
+			db.sets = append(db.sets, auto)
+		}
+		return nil, db, nil
+	default:
 		return ref, nil, nil
 	}
-	wl, ok := load.(ir.WeightLoad)
-	if !ok {
-		return nil, nil, fmt.Errorf("%s: drop(...) requires the annotated set to have a load (spec/semantics/groups.md §3.8)", sd.Pos)
-	}
-	db := &dropsetBuild{byLabel: map[string]*ir.SetRef{}}
-	db.sets = append(db.sets, ref)
-	if sd.Label != "" {
-		db.byLabel[sd.Label] = ref
-	}
-	for _, f := range sd.Drop.Factors {
-		auto := &ir.SetRef{
-			Exercise: catalog,
-			Target:   ir.RepsTarget{Expr: ir.NumberExpr{Value: 1}, Plus: true},
-			Load:     ir.WeightLoad{Expr: ir.MulExpr{Left: ir.NumberExpr{Value: f}, Right: wl.Expr}, Unit: wl.Unit},
-		}
-		db.sets = append(db.sets, auto)
-	}
-	return nil, db, nil
 }
 
 // buildDropsetDecl compiles an explicit `dropset name = { ... }`. Its
@@ -171,14 +220,14 @@ func (c *compiler) buildSetDecl(sd *parser.SetDecl, sc *scope, catalog string) (
 // note under dottedPath), unlike drop(...) sugar's flat namespace.
 func (c *compiler) buildDropsetDecl(dd *parser.DropsetDecl, parent *scope, catalog string) (*dropsetBuild, error) {
 	inner := newScope(parent)
-	db := &dropsetBuild{name: dd.Name, byLabel: map[string]*ir.SetRef{}}
+	db := &dropsetBuild{name: dd.Name, kind: "dropset", byLabel: map[string]*ir.SetRef{}}
 	for _, sd := range dd.Sets {
 		ref, subDb, err := c.buildSetDecl(sd, inner, catalog)
 		if err != nil {
 			return nil, err
 		}
 		if subDb != nil {
-			return nil, fmt.Errorf("%s: drop(...) sugar cannot be used on a set inside an explicit dropset", sd.Pos)
+			return nil, fmt.Errorf("%s: drop(...)/rest_pause(...) sugar cannot be used on a set inside an explicit dropset", sd.Pos)
 		}
 		db.sets = append(db.sets, ref)
 		if sd.Label != "" {
@@ -186,6 +235,32 @@ func (c *compiler) buildDropsetDecl(dd *parser.DropsetDecl, parent *scope, catal
 		}
 	}
 	parent.declareDropset(dd.Name, db)
+	return db, nil
+}
+
+// buildRestpauseDecl compiles an explicit `restpause name = { ... }`
+// (spec/semantics/groups.md §3.9) — same scoping treatment as
+// buildDropsetDecl, fixed 15s rest.single duration
+// (restpauseRestDuration; the sugar form, unlike this one, lets the
+// author pick a duration).
+func (c *compiler) buildRestpauseDecl(rd *parser.RestpauseDecl, parent *scope, catalog string) (*dropsetBuild, error) {
+	inner := newScope(parent)
+	d := restpauseRestDuration
+	db := &dropsetBuild{name: rd.Name, kind: "restpause", restDuration: &d, byLabel: map[string]*ir.SetRef{}}
+	for _, sd := range rd.Sets {
+		ref, subDb, err := c.buildSetDecl(sd, inner, catalog)
+		if err != nil {
+			return nil, err
+		}
+		if subDb != nil {
+			return nil, fmt.Errorf("%s: drop(...)/rest_pause(...) sugar cannot be used on a set inside an explicit restpause group", sd.Pos)
+		}
+		db.sets = append(db.sets, ref)
+		if sd.Label != "" {
+			db.byLabel[sd.Label] = ref
+		}
+	}
+	parent.declareDropset(rd.Name, db)
 	return db, nil
 }
 

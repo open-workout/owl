@@ -1,0 +1,22 @@
+state = {
+    tm.leg_ext.weight = 40
+}
+units = "kg"
+
+block main = {
+    day day1 = {
+        exercise legext = $LegExtension {
+            dropset ds = {
+                set top = 12 @ tm.leg_ext.weight
+                set _   = 1+ @ 0.8 * top.weight
+            }
+            progress = {
+                if ds.top.reps >= 15 and ds.top.reps <= 20 or ds.top.reps >= 25 then
+                    tm.leg_ext.weight += 5
+                else
+                    tm.leg_ext.weight += 2.5
+            }
+        }
+        legext;
+    }
+}

@@ -57,21 +57,30 @@ type DayDecl struct {
 type ExerciseDecl struct {
 	Name    string
 	Catalog string
-	// Items: *SetDecl | *ProgressDecl | *DropsetDecl | *CondItem.
+	// Items: *SetDecl | *ProgressDecl | *DropsetDecl | *RestpauseDecl | *CondItem.
 	Items []any
 	Pos   lexer.Pos
 }
 
 type SetDecl struct {
-	Label  string // "" for surface '_'
-	Target Quantity
-	Load   *Quantity // nil if no '@ quantity'
-	Drop   *DropModifier
-	Pos    lexer.Pos
+	Label     string // "" for surface '_'
+	Target    Quantity
+	Load      *Quantity // nil if no '@ quantity'
+	Drop      *DropModifier
+	RestPause *RestPauseModifier // mutually exclusive with Drop
+	Pos       lexer.Pos
 }
 
 type DropModifier struct {
 	Factors []float64
+}
+
+// RestPauseModifier is `rest_pause(duration, burstCount)` sugar on a
+// `set` line: burstCount extra sets at the same load, each preceded by
+// `duration`'s rest (spec/semantics/groups.md §3.9).
+type RestPauseModifier struct {
+	Duration Duration
+	Bursts   int
 }
 
 // ProgressDecl is `progress = { ... }` — at most one per exercise
@@ -101,6 +110,16 @@ type ProgressIf struct {
 }
 
 type DropsetDecl struct {
+	Name string
+	Sets []*SetDecl
+	Pos  lexer.Pos
+}
+
+// RestpauseDecl is the explicit `restpause NAME = { ... }` form
+// (spec/semantics/groups.md §3.9) — same shape as DropsetDecl, fixed
+// 15s rest between bursts (not itself overridable in this form; see
+// RestPauseModifier for the duration-carrying sugar).
+type RestpauseDecl struct {
 	Name string
 	Sets []*SetDecl
 	Pos  lexer.Pos

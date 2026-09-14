@@ -1,0 +1,88 @@
+{
+  "owlVersion": "0.1.0",
+  "units": "kg",
+  "state": [],
+  "blocks": [
+    {
+      "name": "main",
+      "days": [
+        {
+          "name": "day1",
+          "groups": [
+            {
+              "name": "partA",
+              "group": {
+                "type": "group",
+                "kind": "emom",
+                "interleave": "round_robin",
+                "rest": { "mode": "remainder" },
+                "termination": { "mode": "emom", "interval": { "value": 1, "unit": "m" }, "n": 5 },
+                "atomic": false,
+                "members": [
+                  {
+                    "type": "setRef",
+                    "exercise": "KettlebellSwing",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 15 } },
+                    "load": { "kind": "weight", "expr": { "type": "number", "value": 24 }, "unit": "kg" }
+                  },
+                  {
+                    "type": "setRef",
+                    "exercise": "Burpee",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 10 } }
+                  }
+                ]
+              }
+            },
+            {
+              "name": "partB",
+              "group": {
+                "type": "group",
+                "kind": "amrap",
+                "interleave": "round_robin",
+                "rest": { "mode": "ad_lib" },
+                "termination": { "mode": "time_cap", "cap": { "value": 10, "unit": "m" } },
+                "atomic": false,
+                "members": [
+                  {
+                    "type": "setRef",
+                    "exercise": "WallBall",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 15 } },
+                    "load": { "kind": "weight", "expr": { "type": "number", "value": 9 }, "unit": "kg" }
+                  },
+                  {
+                    "type": "setRef",
+                    "exercise": "PullUp",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 10 } }
+                  }
+                ]
+              }
+            }
+          ],
+          "body": {
+            "type": "group",
+            "kind": "straight",
+            "interleave": "sequential",
+            "rest": { "mode": "single", "duration": { "value": 2, "unit": "m" } },
+            "termination": { "mode": "count", "n": 2 },
+            "atomic": false,
+            "members": [
+              { "type": "ref", "name": "partA" },
+              { "type": "ref", "name": "partB" }
+            ]
+          }
+        }
+      ],
+      "body": {
+        "type": "group",
+        "kind": "straight",
+        "interleave": "sequential",
+        "rest": { "mode": "single" },
+        "termination": { "mode": "count", "n": 1 },
+        "atomic": false,
+        "members": [
+          { "type": "ref", "name": "day1" }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+units = "kg"
+
+block main = {
+    day day1 = {
+        # Bare for_time: one round_robin lap over a flat statement list —
+        # no `rounds` macro, kind stays "for_time" throughout.
+        partA = for_time {
+            $Row(500m)
+            $Burpee(20)
+        }
+
+        # `rounds [...] as n` macro: sequential outer "for_time"-kind
+        # wrapper around three round_robin, 1-lap, "rounds"-kind laps.
+        partB = for_time {
+            rounds [21, 15, 9] as n {
+                $KettlebellSwing(n @ 24kg)
+                $PullUp(n)
+            }
+        }
+
+        partA;
+        rest(3min);
+        partB;
+    }
+}

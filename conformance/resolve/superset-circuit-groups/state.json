@@ -1,0 +1,6 @@
+{
+  "bindings": [
+    { "path": "tm.bench.weight", "value": 65 }
+  ],
+  "catalogFields": []
+}

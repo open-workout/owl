@@ -25,6 +25,8 @@ const (
 	PROGRESS
 	DROPSET
 	DROP
+	RESTPAUSE
+	REST_PAUSE
 	REST
 	IF
 	THEN
@@ -73,30 +75,32 @@ const (
 )
 
 var keywords = map[string]Kind{
-	"state":    STATE,
-	"stats":    STATE,
-	"units":    UNITS,
-	"plates":   PLATES,
-	"block":    BLOCK,
-	"day":      DAY,
-	"exercise": EXERCISE,
-	"set":      SET,
-	"progress": PROGRESS,
-	"dropset":  DROPSET,
-	"drop":     DROP,
-	"rest":     REST,
-	"if":       IF,
-	"then":     THEN,
-	"else":     ELSE,
-	"superset": SUPERSET,
-	"circuit":  CIRCUIT,
-	"emom":     EMOM,
-	"amrap":    AMRAP,
-	"for_time": FOR_TIME,
-	"rounds":   ROUNDS,
-	"as":       AS,
-	"and":      AND,
-	"or":       OR,
+	"state":      STATE,
+	"stats":      STATE,
+	"units":      UNITS,
+	"plates":     PLATES,
+	"block":      BLOCK,
+	"day":        DAY,
+	"exercise":   EXERCISE,
+	"set":        SET,
+	"progress":   PROGRESS,
+	"dropset":    DROPSET,
+	"drop":       DROP,
+	"restpause":  RESTPAUSE,
+	"rest_pause": REST_PAUSE,
+	"rest":       REST,
+	"if":         IF,
+	"then":       THEN,
+	"else":       ELSE,
+	"superset":   SUPERSET,
+	"circuit":    CIRCUIT,
+	"emom":       EMOM,
+	"amrap":      AMRAP,
+	"for_time":   FOR_TIME,
+	"rounds":     ROUNDS,
+	"as":         AS,
+	"and":        AND,
+	"or":         OR,
 }
 
 var kindNames = map[Kind]string{

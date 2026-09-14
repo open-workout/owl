@@ -367,10 +367,12 @@ func (p *parser) parseExerciseItem() (any, error) {
 		return p.parseProgressDecl()
 	case lexer.DROPSET:
 		return p.parseDropsetDecl()
+	case lexer.RESTPAUSE:
+		return p.parseRestpauseDecl()
 	case lexer.IF:
 		return p.parseCondItem(func(p *parser) (any, error) { return p.parseExerciseItem() })
 	default:
-		return nil, p.errf("expected 'set', 'progress', 'dropset', or 'if', got %v", p.kind())
+		return nil, p.errf("expected 'set', 'progress', 'dropset', 'restpause', or 'if', got %v", p.kind())
 	}
 }
 
@@ -402,13 +404,20 @@ func (p *parser) parseSetDecl() (*SetDecl, error) {
 		load = &q
 	}
 	var drop *DropModifier
-	if p.at(lexer.DROP) {
+	var restPause *RestPauseModifier
+	switch {
+	case p.at(lexer.DROP):
 		drop, err = p.parseDropModifier()
 		if err != nil {
 			return nil, err
 		}
+	case p.at(lexer.REST_PAUSE):
+		restPause, err = p.parseRestPauseModifier()
+		if err != nil {
+			return nil, err
+		}
 	}
-	return &SetDecl{Label: label, Target: target, Load: load, Drop: drop, Pos: pos}, nil
+	return &SetDecl{Label: label, Target: target, Load: load, Drop: drop, RestPause: restPause, Pos: pos}, nil
 }
 
 func (p *parser) parseDropModifier() (*DropModifier, error) {
@@ -433,6 +442,28 @@ func (p *parser) parseDropModifier() (*DropModifier, error) {
 		return nil, err
 	}
 	return &DropModifier{Factors: factors}, nil
+}
+
+func (p *parser) parseRestPauseModifier() (*RestPauseModifier, error) {
+	p.advance() // 'rest_pause'
+	if _, err := p.expect(lexer.LPAREN); err != nil {
+		return nil, err
+	}
+	d, err := p.parseDuration()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := p.expect(lexer.COMMA); err != nil {
+		return nil, err
+	}
+	bursts, err := p.parseNumberLiteral()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := p.expect(lexer.RPAREN); err != nil {
+		return nil, err
+	}
+	return &RestPauseModifier{Duration: d, Bursts: int(bursts)}, nil
 }
 
 func (p *parser) parseProgressDecl() (*ProgressDecl, error) {
@@ -588,6 +619,34 @@ func (p *parser) parseDropsetDecl() (*DropsetDecl, error) {
 		return nil, err
 	}
 	return &DropsetDecl{Name: name.Lit, Sets: sets, Pos: pos}, nil
+}
+
+func (p *parser) parseRestpauseDecl() (*RestpauseDecl, error) {
+	pos := p.cur().Pos
+	p.advance() // 'restpause'
+	name, err := p.expect(lexer.IDENT)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := p.expect(lexer.ASSIGN); err != nil {
+		return nil, err
+	}
+	if _, err := p.expect(lexer.LBRACE); err != nil {
+		return nil, err
+	}
+	var sets []*SetDecl
+	for !p.at(lexer.RBRACE) {
+		s, err := p.parseSetDecl()
+		if err != nil {
+			return nil, err
+		}
+		sets = append(sets, s)
+		p.skipOptSemi()
+	}
+	if _, err := p.expect(lexer.RBRACE); err != nil {
+		return nil, err
+	}
+	return &RestpauseDecl{Name: name.Lit, Sets: sets, Pos: pos}, nil
 }
 
 // ---- conditionals ----

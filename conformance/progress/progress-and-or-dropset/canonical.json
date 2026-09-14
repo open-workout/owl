@@ -1,0 +1,176 @@
+{
+  "owlVersion": "0.1.0",
+  "units": "kg",
+  "state": [
+    { "path": "tm.leg_ext.weight", "expr": { "type": "number", "value": 40 } }
+  ],
+  "blocks": [
+    {
+      "name": "main",
+      "days": [
+        {
+          "name": "day1",
+          "exercises": [
+            {
+              "name": "legext",
+              "catalog": "LegExtension",
+              "sets": [],
+              "groups": [
+                {
+                  "name": "ds",
+                  "group": {
+                    "type": "group",
+                    "kind": "dropset",
+                    "interleave": "sequential",
+                    "rest": { "mode": "single" },
+                    "termination": { "mode": "count", "n": 2 },
+                    "atomic": true,
+                    "members": [
+                      {
+                        "type": "setRef",
+                        "label": "top",
+                        "exercise": "LegExtension",
+                        "target": { "kind": "reps", "expr": { "type": "number", "value": 12 } },
+                        "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.leg_ext.weight" }, "unit": "kg" }
+                      },
+                      {
+                        "type": "setRef",
+                        "exercise": "LegExtension",
+                        "target": { "kind": "reps", "expr": { "type": "number", "value": 1 }, "plus": true },
+                        "load": {
+                          "kind": "weight",
+                          "expr": {
+                            "type": "mul",
+                            "left": { "type": "number", "value": 0.8 },
+                            "right": { "type": "path", "path": "tm.leg_ext.weight" }
+                          },
+                          "unit": "kg"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ],
+              "body": {
+                "type": "group",
+                "kind": "straight",
+                "interleave": "sequential",
+                "rest": { "mode": "single" },
+                "termination": { "mode": "count", "n": 1 },
+                "atomic": false,
+                "members": [
+                  {
+                    "type": "group",
+                    "kind": "dropset",
+                    "interleave": "sequential",
+                    "rest": { "mode": "single" },
+                    "termination": { "mode": "count", "n": 2 },
+                    "atomic": true,
+                    "members": [
+                      {
+                        "type": "setRef",
+                        "label": "top",
+                        "exercise": "LegExtension",
+                        "target": { "kind": "reps", "expr": { "type": "number", "value": 12 } },
+                        "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.leg_ext.weight" }, "unit": "kg" }
+                      },
+                      {
+                        "type": "setRef",
+                        "exercise": "LegExtension",
+                        "target": { "kind": "reps", "expr": { "type": "number", "value": 1 }, "plus": true },
+                        "load": {
+                          "kind": "weight",
+                          "expr": {
+                            "type": "mul",
+                            "left": { "type": "number", "value": 0.8 },
+                            "right": { "type": "path", "path": "tm.leg_ext.weight" }
+                          },
+                          "unit": "kg"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "progress": {
+                "stmts": [
+                  {
+                    "type": "if",
+                    "cond": {
+                      "type": "or",
+                      "left": {
+                        "type": "and",
+                        "left": {
+                          "type": "comparison",
+                          "op": ">=",
+                          "left": { "type": "log", "label": "top", "field": "reps" },
+                          "right": { "type": "number", "value": 15 }
+                        },
+                        "right": {
+                          "type": "comparison",
+                          "op": "<=",
+                          "left": { "type": "log", "label": "top", "field": "reps" },
+                          "right": { "type": "number", "value": 20 }
+                        }
+                      },
+                      "right": {
+                        "type": "comparison",
+                        "op": ">=",
+                        "left": { "type": "log", "label": "top", "field": "reps" },
+                        "right": { "type": "number", "value": 25 }
+                      }
+                    },
+                    "then": [
+                      {
+                        "type": "assign",
+                        "path": "tm.leg_ext.weight",
+                        "expr": {
+                          "type": "add",
+                          "left": { "type": "path", "path": "tm.leg_ext.weight" },
+                          "right": { "type": "number", "value": 5 }
+                        }
+                      }
+                    ],
+                    "else": [
+                      {
+                        "type": "assign",
+                        "path": "tm.leg_ext.weight",
+                        "expr": {
+                          "type": "add",
+                          "left": { "type": "path", "path": "tm.leg_ext.weight" },
+                          "right": { "type": "number", "value": 2.5 }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "body": {
+            "type": "group",
+            "kind": "straight",
+            "interleave": "sequential",
+            "rest": { "mode": "single" },
+            "termination": { "mode": "count", "n": 1 },
+            "atomic": false,
+            "members": [
+              { "type": "ref", "name": "legext" }
+            ]
+          }
+        }
+      ],
+      "body": {
+        "type": "group",
+        "kind": "straight",
+        "interleave": "sequential",
+        "rest": { "mode": "single" },
+        "termination": { "mode": "count", "n": 1 },
+        "atomic": false,
+        "members": [
+          { "type": "ref", "name": "day1" }
+        ]
+      }
+    }
+  ]
+}

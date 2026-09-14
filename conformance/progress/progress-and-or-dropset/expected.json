@@ -1,0 +1,6 @@
+{
+  "bindings": [
+    { "path": "tm.leg_ext.weight", "value": 45 }
+  ],
+  "catalogFields": []
+}

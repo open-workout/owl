@@ -53,8 +53,45 @@ patch/minor/major change once the spec reaches `1.0`; everything below
 - `duration` now also accepts `min` for minutes (`rest(2min)`), matching
   the spelling `unit` already offered — previously only bare `m` worked
   in a `duration` slot.
+- `restpause` groups (`spec/grammar.ebnf`'s new `restpauseDecl`/
+  `restPauseModifier`, `spec/semantics/groups.md` §3.9): the explicit
+  named `restpause NAME = { ... }` declaration and the
+  `rest_pause(duration, burstCount)` sugar, both compiling to the same
+  `Group{kind:"restpause", ...}` shape `dropset` already used, differing
+  only in `rest.single`'s duration (`15s`, fixed in the explicit form,
+  author-chosen in the sugar) and that bursts hold the annotated set's
+  own target/load fixed rather than a descending percentage of it. No
+  `canonical-form.schema.json` change — `group.kind`'s enum already
+  listed `"restpause"`. Backed by `conformance/parse/restpause-explicit/`,
+  `conformance/parse/restpause-sugar/`, and
+  `conformance/programs/restpause-example.owl`.
+- Golden `conformance/resolve/`/`conformance/progress/` coverage for six
+  previously parse-only-or-unattested constructs, each a new
+  `conformance/programs/*.owl` paired with a hand-verified fixture under
+  `conformance/resolve/` (or `conformance/progress/` for the one about
+  `progress` specifically): `superset`/`circuit` (with an intra
+  `rest(d)` override and a load-less/bodyweight circuit member),
+  `emom`/`amrap`, the `for_time`-bare vs. `for_time`-wrapping-`rounds`
+  contrast, `and`/`or` in a structural `Conditional.cond`, an inline
+  %1RM-style load composed directly against a `catalogField` (not via a
+  `state` binding) alongside a per-set `DurationTarget`, and `and`/`or`
+  inside a `progressionIf.cond` reading a dropset's logged value. See
+  each fixture's `README.md` for what it demonstrates and why its
+  `state.json`/`log.json` values were chosen.
 
 ### Changed
+- Corrected `conformance/resolve/double-progression-fallback/` and
+  `conformance/resolve/conditional-progress-else-branch/`'s
+  `expected.json`: a `Ref` member inlines to the *whole* `Group` value
+  the referenced declaration's `body` compiled to (nested one level
+  deeper), matching `resolution.md`'s "replaced by the actual...body"
+  literally — not spliced flat into the parent's own `members` list.
+  Both fixtures previously showed the flattened shape (an artifact of
+  being copy-pasted from the very first schema-init fixture, before
+  `Ref` inlining was a documented concern); their single-`Ref`,
+  single-member case happened not to distinguish the two readings.
+  Confirmed against the new multi-member `conformance/resolve/`
+  fixtures below, where the two readings actually diverge.
 - **`progress` is now code, not a call into a closed set of stdlib
   schemes — `double` is gone.** Previously `progress = double(top_set,
   8, 12, 5)` named a set label and positional tuning numbers, resolved
@@ -99,7 +136,6 @@ patch/minor/major change once the spec reaches `1.0`; everything below
   and branch on the ceiling using compound assignment.
 
 ### Open questions (tracked in the spec, not yet resolved)
-- `dropset`/`restpause` surface syntax (`spec/semantics/groups.md` §5).
 - Explicit inter-round rest syntax for `superset`/`circuit`
   (`spec/semantics/groups.md` §5).
 - Whether `state` and `stats` should stay synonyms or become distinct

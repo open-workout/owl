@@ -56,7 +56,7 @@ document produces.
 | `superset(a, b, …)` | `round_robin` | `{intra:0, inter:R}` | `count(rounds)` | `false` |
 | `circuit(a, b, …)` | `round_robin` | `{intra:0, inter:R}` | `count(rounds)` | `false` |
 | `dropset NAME = { ... }` / `drop(...)` sugar (§3.8) | `sequential` | `{single: 0s}` | `count(drops)` | `true` |
-| rest-pause *(proposed, §5)* | `sequential` | `{single: 15s}` | `count(bursts)` | `true` |
+| `restpause NAME = { ... }` / `rest_pause(...)` sugar (§3.9) | `sequential` | `{single: 15s}` | `count(bursts)` | `true` |
 | `N*emom(t){ … }` | `round_robin` | `{inter: remainder}` | `emom(t, N)` | `false` |
 | `amrap(t){ … }` | `round_robin` | `{ad_lib}` | `time_cap(t)` | `false` |
 | `for_time { … }` | `round_robin` | `{ad_lib}` | `for_time` | `false` |
@@ -312,6 +312,58 @@ explicit name always introduces a nested one.
 one. `1+` (open-ended reps) is being used here specifically to mean "to
 failure" — see `targets-loads.md` §1's note on `plus`.
 
+### 3.9 `restpause` declaration → `restpause` Group
+
+```owl
+exercise curls = $DumbbellCurl {
+    restpause burnout = {
+        set top = 8 @ tm.curl.weight
+        set _   = 1+ @ top.weight
+        set _   = 1+ @ top.weight
+    }
+    progress = {
+        if burnout.top.reps >= 10 then
+            tm.curl.weight += 2.5
+    }
+}
+```
+
+→ `NamedGroup{ name: "burnout", group: Group{ kind: restpause, interleave:
+sequential, rest: {single: 15s}, termination: count(3), atomic: true,
+members: [SetRef(top), SetRef(_), SetRef(_)] } }` — the same shape §3.8
+gives `dropset`, held in the exercise declaration's `groups` list. The
+only differences from `dropset`: `rest.single`'s duration is `15s`
+instead of `0s`, and each burst's `target`/`load` copies `top`'s own
+(fixed), rather than the descending-percentage `load.expr` a dropset's
+auto sets get — the burden of a rest-pause set is fatigue against a
+constant load, not a lighter one. Naming, local-reference qualification
+(`burnout.top`), and `progress`'s `{"type":"log",...}` read of a member
+set's logged value all follow exactly as they do for `dropset` (§3.8) —
+a `restpause` group is a scope the same way.
+
+**Sugar**: `rest_pause(duration, burstCount)` on a `set` line desugars
+to the same `restpause` `Group` shape, anonymously:
+
+```owl
+exercise curls = $DumbbellCurl {
+    set top = 8 @ tm.curl.weight rest_pause(15s, 2)
+    progress = {
+        if top.reps >= 10 then
+            tm.curl.weight += 2.5
+    }
+}
+```
+
+expands to the identical `Group{ kind: restpause, ... }` as the explicit
+form, with `burstCount` auto-generated `SetRef`s copying `top`'s own
+`target`/`load` — but the group is **not** named, so (mirroring
+`drop(...)`'s sugar in §3.8) it gets no entry in `ExerciseDecl.groups`
+and is instead embedded directly in the exercise's `body` at the
+position `top` was declared, with `top` staying reachable unqualified.
+Unlike the explicit form (whose bursts' rest is fixed at `15s`), the
+sugar's `duration` argument sets `rest.single` directly — there's no
+per-burst factor list here since the load never changes across bursts.
+
 ## 4. Where structural compilation ends
 
 Everything above runs once per program, independent of any athlete. The
@@ -328,12 +380,6 @@ These follow directly from the group model above, but no `.owl` file
 demonstrates surface syntax for them yet. Flagging them here rather than
 asserting them as canon:
 
-- **`restpause`** — proposed as the same shape `dropset` uses (§3.8: a
-  named `restpause NAME = { ... }` declaration inside an `exercise { }`,
-  or a `rest_pause(15s)`-style sugar modifier on a `set` line), differing
-  only in `rest`'s `single` duration (`15s` instead of `0`) and that the
-  load stays fixed across bursts rather than descending. Not added to the grammar
-  yet — no attested example to confirm the sugar's exact spelling.
 - **Explicit inter-round rest for `superset`/`circuit`** — the `rest(d)`
   *between* two `ref` args sets `intra` (§3.2), but there's no attested way
   to override the `inter` (between-lap) default. A trailing `rest(d)` after
