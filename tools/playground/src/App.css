@@ -281,17 +281,112 @@ body {
 }
 
 .code-editor {
+  --code-font: "SF Mono", Monaco, Consolas, "Courier New", monospace;
+  --code-font-size: 0.9rem;
+  --code-line-height: 1.5;
+  --code-padding: 1rem;
+
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.code-gutter {
+  flex-shrink: 0;
+  overflow: hidden;
+  padding: var(--code-padding) 0.75rem var(--code-padding) var(--code-padding);
+  text-align: right;
+  color: var(--fg-muted);
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+  user-select: none;
+}
+
+.code-gutter-line,
+.code-line {
+  font-family: var(--code-font);
+  font-size: var(--code-font-size);
+  line-height: var(--code-line-height);
+  white-space: pre;
+}
+
+.code-editor-scroll {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.code-backdrop,
+.code-editor-textarea {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: var(--code-padding);
+  font-family: var(--code-font);
+  font-size: var(--code-font-size);
+  line-height: var(--code-line-height);
+  white-space: pre;
+  box-sizing: border-box;
+}
+
+.code-backdrop {
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--fg);
+}
+
+.code-editor-textarea {
   width: 100%;
   height: 100%;
   resize: none;
   border: none;
   outline: none;
-  background: var(--bg);
-  color: var(--fg);
-  font-family: "SF Mono", Monaco, Consolas, "Courier New", monospace;
-  font-size: 0.9rem;
-  padding: 1rem;
-  line-height: 1.5;
+  overflow: auto;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--fg);
+}
+
+/* Selection is painted over the (invisible) textarea text, which sits on
+   top of the syntax-highlighted backdrop — an opaque highlight would hide
+   the colored text it's covering, so keep it translucent like a real IDE. */
+.code-editor-textarea::selection {
+  background: rgba(78, 161, 255, 0.35);
+  color: transparent;
+}
+.code-editor-textarea::-moz-selection {
+  background: rgba(78, 161, 255, 0.35);
+  color: transparent;
+}
+
+.tok-keyword {
+  color: #c586c0;
+}
+.tok-catalog {
+  color: #4ec9b0;
+}
+.tok-string {
+  color: #ce9178;
+}
+.tok-number {
+  color: #b5cea8;
+}
+.tok-comment {
+  color: #6a9955;
+}
+.tok-sentinel {
+  color: #dcdcaa;
+}
+.tok-operator {
+  color: #d4d4d4;
+}
+.tok-key {
+  color: #9cdcfe;
+}
+.tok-punct {
+  color: #808080;
 }
 
 .markdown-preview {
