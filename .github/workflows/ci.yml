@@ -6,6 +6,20 @@ on:
   pull_request:
 
 jobs:
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      playground: ${{ steps.filter.outputs.playground }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            playground:
+              - 'tools/playground/**'
+
   reference-go:
     name: Build reference/ + validate conformance fixtures
     runs-on: ubuntu-latest
@@ -31,3 +45,22 @@ jobs:
       # catches a wrong implementation.
       # TODO: once Resolve/Progress are implemented, extend go test's
       # coverage to conformance/{resolve,progress}/ the same way.
+
+  playground-web:
+    name: Build tools/playground/
+    needs: changes
+    if: needs.changes.outputs.playground == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/playground
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: tools/playground/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build

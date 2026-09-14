@@ -1,0 +1,480 @@
+:root {
+  color-scheme: light dark;
+  --bg: #1e1e1e;
+  --bg-alt: #252526;
+  --bg-elevated: #2d2d2d;
+  --border: #3c3c3c;
+  --fg: #d4d4d4;
+  --fg-muted: #8a8a8a;
+  --accent: #4ea1ff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  background: var(--bg-alt);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.top-bar-title {
+  font-weight: 600;
+}
+
+.top-bar-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.top-bar-actions button {
+  background: var(--bg-elevated);
+  color: var(--fg-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.3rem 0.75rem;
+  cursor: not-allowed;
+}
+
+.workbench {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: var(--bg-alt);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.sidebar-header {
+  padding: 0.75rem 1rem 0.25rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fg-muted);
+}
+
+.sidebar-empty {
+  padding: 0.5rem 1rem;
+  color: var(--fg-muted);
+  font-size: 0.85rem;
+}
+
+.file-tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+}
+
+.file-tree-row {
+  display: flex;
+  align-items: center;
+}
+
+.file-tree-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--fg);
+  text-align: left;
+  padding: 0.35rem 1rem;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.file-tree-item:hover {
+  background: var(--bg-elevated);
+}
+
+.file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-rename-input {
+  flex: 1;
+  margin: 0.2rem 0.5rem;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  padding: 0.1rem 0.4rem;
+}
+
+.file-delete {
+  background: none;
+  border: none;
+  color: var(--fg-muted);
+  cursor: pointer;
+  padding: 0 0.6rem;
+  visibility: hidden;
+}
+
+.file-tree-row:hover .file-delete {
+  visibility: visible;
+}
+
+.file-delete:hover {
+  color: #ff6b6b;
+}
+
+.new-file-form {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.new-file-form input {
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.35rem 0.5rem;
+}
+
+.new-file-form button {
+  background: var(--accent);
+  color: #0b0b0b;
+  border: none;
+  border-radius: 4px;
+  padding: 0.4rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.new-file-error {
+  color: #ff6b6b;
+  font-size: 0.8rem;
+}
+
+.pane-row {
+  flex: 1;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+}
+
+.editor-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.pane-resizer {
+  width: 6px;
+  cursor: col-resize;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.pane-resizer:hover,
+.pane-resizer:active {
+  background: var(--accent);
+}
+
+.editor-pane-focused {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.tab-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-alt);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.tab-list {
+  display: flex;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+.tab-active {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.tab-close {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0 0.15rem;
+}
+
+.pane-controls {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0 0.5rem;
+  flex-shrink: 0;
+}
+
+.pane-controls button {
+  background: var(--bg-elevated);
+  color: var(--fg-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.pane-controls button:hover {
+  color: var(--fg);
+}
+
+.editor-pane-content {
+  flex: 1;
+  min-height: 0;
+  background: var(--bg);
+}
+
+.editor-pane-empty {
+  padding: 1rem;
+  color: var(--fg-muted);
+}
+
+.code-editor {
+  --code-font: "SF Mono", Monaco, Consolas, "Courier New", monospace;
+  --code-font-size: 0.9rem;
+  --code-line-height: 1.5;
+  --code-padding: 1rem;
+
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.code-gutter {
+  flex-shrink: 0;
+  overflow: hidden;
+  padding: var(--code-padding) 0.75rem var(--code-padding) var(--code-padding);
+  text-align: right;
+  color: var(--fg-muted);
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+  user-select: none;
+}
+
+.code-gutter-line,
+.code-line {
+  font-family: var(--code-font);
+  font-size: var(--code-font-size);
+  line-height: var(--code-line-height);
+  white-space: pre;
+}
+
+.code-editor-scroll {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.code-backdrop,
+.code-editor-textarea {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: var(--code-padding);
+  font-family: var(--code-font);
+  font-size: var(--code-font-size);
+  line-height: var(--code-line-height);
+  white-space: pre;
+  box-sizing: border-box;
+}
+
+.code-backdrop {
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--fg);
+}
+
+.code-editor-textarea {
+  width: 100%;
+  height: 100%;
+  resize: none;
+  border: none;
+  outline: none;
+  overflow: auto;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--fg);
+}
+
+/* Selection is painted over the (invisible) textarea text, which sits on
+   top of the syntax-highlighted backdrop — an opaque highlight would hide
+   the colored text it's covering, so keep it translucent like a real IDE. */
+.code-editor-textarea::selection {
+  background: rgba(78, 161, 255, 0.35);
+  color: transparent;
+}
+.code-editor-textarea::-moz-selection {
+  background: rgba(78, 161, 255, 0.35);
+  color: transparent;
+}
+
+.tok-keyword {
+  color: #c586c0;
+}
+.tok-catalog {
+  color: #4ec9b0;
+}
+.tok-string {
+  color: #ce9178;
+}
+.tok-number {
+  color: #b5cea8;
+}
+.tok-comment {
+  color: #6a9955;
+}
+.tok-sentinel {
+  color: #dcdcaa;
+}
+.tok-operator {
+  color: #d4d4d4;
+}
+.tok-key {
+  color: #9cdcfe;
+}
+.tok-punct {
+  color: #808080;
+}
+
+.markdown-preview {
+  height: 100%;
+  overflow-y: auto;
+  padding: 1rem 1.5rem;
+}
+
+.markdown-preview :is(h1, h2, h3) {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3rem;
+}
+
+.markdown-preview code {
+  background: var(--bg-elevated);
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+}
+
+.markdown-preview pre code {
+  display: block;
+  padding: 0.75rem;
+  overflow-x: auto;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.25rem;
+  width: min(320px, calc(100vw - 2rem));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.modal-title {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.modal-message {
+  color: var(--fg-muted);
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.modal-button {
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+}
+
+.modal-button:hover {
+  border-color: var(--fg-muted);
+}
+
+.modal-button-danger {
+  background: #c0392b;
+  border-color: #c0392b;
+  color: #fff;
+}
+
+.modal-button-danger:hover {
+  background: #a5321f;
+  border-color: #a5321f;
+}

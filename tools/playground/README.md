@@ -1,13 +1,79 @@
 # tools/playground/
 
-A web REPL: paste an OWL program, see it parsed, compiled to canonical
-form, and (given some `state`) resolved into a session.
+A browser-based IDE for authoring OWL workout projects: a file tree,
+tabbed editing, and up to three side-by-side panes. React + TypeScript
++ Vite.
 
-**Lower priority given the chosen architecture.** The product doesn't
-need a browser-side compiler — compilation happens server-side in Go (see
-[`../../reference/README.md`](../../reference/README.md)) and the phone
-just receives JSON. If built, this would most simply be a small static
-page that calls a local instance of the `owlc` CLI's HTTP-server mode (or
-a thin dev-only endpoint) rather than compiling in-browser via WASM — no
-need for Go's `js/wasm` target unless client-side compilation becomes a
-real requirement later.
+## Current scope (MVP)
+
+- **File tree** (left sidebar) — flat list of in-memory files, each an
+  `.owl`, `.json`, or `.md` file. A new project starts **empty**; use
+  "+ New File" to create files (extension determines kind). Files
+  support rename (double-click) and delete.
+- **Tabs** — clicking a file opens it in the focused pane. `.owl` and
+  `.json` files open as a single source tab; `.md` files open as
+  **two** tabs, "name.md" (raw source, editable) and "name.md
+  (Preview)" (rendered markdown, via `react-markdown` + `remark-gfm`).
+- **Split view** — 1 to 3 vertical panes ("Split" / "Close Pane" in
+  each pane's tab bar). Any file can be opened independently in any
+  pane.
+- **Editing** — plain monospace `<textarea>` per file, held in React
+  state (`src/state/WorkspaceContext.tsx`) and syntax-highlighted for
+  `.owl`/`.json` (see `src/utils/highlight.ts`).
+- **Persistence** — the whole workspace (files, open tabs, split
+  layout, pane widths) is saved to the browser's `localStorage`
+  (`src/state/persistence.ts`) on every change and restored on load, so
+  closing and reopening the tab picks up where you left off. This is
+  per-browser only — nothing is synced to a server or another device,
+  and clearing site data wipes it. Stored data is versioned and
+  validated on load; anything that doesn't parse or doesn't match the
+  current shape is discarded rather than crashing the app.
+
+**No compiler is wired in.** `.json` files are just files a user
+pastes or types into — there is no "Compile" action turning an `.owl`
+source into canonical JSON yet. See "Future work" below.
+
+## Not built yet (visible stubs)
+
+The top bar has two buttons that render disabled with a "Coming soon"
+tooltip — they fix the UI shape for later work without functioning yet:
+
+- **Publish** — will publish the current project to the (not yet
+  built) marketplace.
+- **Send to Phone** — will hand the current project to the
+  OpenWorkout phone app via a QR code.
+
+Neither has any backend, marketplace, or QR logic behind it today.
+
+## Future work
+
+- **Compilation.** Per the root [`CLAUDE.md`](../../CLAUDE.md) and
+  [`reference/README.md`](../../reference/README.md), compilation runs
+  server-side in Go — the intended shape here is a "Compile" action
+  that calls a local `owlc` HTTP-server mode (or a thin dev-only
+  endpoint), not an in-browser/WASM compiler. If client-side
+  `Compile`/`Resolve` ever becomes a real requirement, that's what
+  [`bindings/js/`](../../bindings/js/) is the placeholder for — nothing
+  in this app imports it today.
+- **Forking.** Opening a project tree "forked" from someone else's
+  published program (once Publish/marketplace exist) — today, every
+  project starts empty. The file/pane state (`src/types.ts`,
+  `src/state/WorkspaceContext.tsx`) is a plain in-memory model, so
+  seeding it from fetched files instead of starting empty is a small
+  extension, not a redesign.
+- **A real code editor.** CodeMirror or Monaco are the natural upgrades
+  over the current hand-rolled highlighted-`<textarea>` overlay, when
+  that's worth the dependency weight.
+- **Cross-device / account-backed persistence.** Today's `localStorage`
+  save is per-browser only; syncing a project across devices needs a
+  backend, which is really the same future work as Publish.
+
+## Running locally
+
+```sh
+cd tools/playground
+npm install
+npm run dev        # dev server with hot reload
+npm run typecheck  # tsc --noEmit
+npm run build      # typecheck + production build to dist/
+```
