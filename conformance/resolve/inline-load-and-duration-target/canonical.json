@@ -1,0 +1,117 @@
+{
+  "owlVersion": "0.1.0",
+  "units": "kg",
+  "state": [],
+  "blocks": [
+    {
+      "name": "main",
+      "days": [
+        {
+          "name": "day1",
+          "exercises": [
+            {
+              "name": "squat",
+              "catalog": "BarbellBackSquat",
+              "sets": [
+                {
+                  "type": "setRef",
+                  "label": "a",
+                  "exercise": "BarbellBackSquat",
+                  "target": { "kind": "reps", "expr": { "type": "number", "value": 5 } },
+                  "load": {
+                    "kind": "weight",
+                    "expr": {
+                      "type": "mul",
+                      "left": { "type": "number", "value": 0.8 },
+                      "right": { "type": "catalogField", "catalog": "BarbellBackSquat", "field": "e1rm" }
+                    },
+                    "unit": "kg"
+                  }
+                }
+              ],
+              "groups": [],
+              "body": {
+                "type": "group",
+                "kind": "straight",
+                "interleave": "sequential",
+                "rest": { "mode": "single" },
+                "termination": { "mode": "count", "n": 1 },
+                "atomic": false,
+                "members": [
+                  {
+                    "type": "setRef",
+                    "label": "a",
+                    "exercise": "BarbellBackSquat",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 5 } },
+                    "load": {
+                      "kind": "weight",
+                      "expr": {
+                        "type": "mul",
+                        "left": { "type": "number", "value": 0.8 },
+                        "right": { "type": "catalogField", "catalog": "BarbellBackSquat", "field": "e1rm" }
+                      },
+                      "unit": "kg"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "name": "plank",
+              "catalog": "Plank",
+              "sets": [
+                {
+                  "type": "setRef",
+                  "label": "hold",
+                  "exercise": "Plank",
+                  "target": { "kind": "duration", "expr": { "type": "number", "value": 60 }, "unit": "s" }
+                }
+              ],
+              "groups": [],
+              "body": {
+                "type": "group",
+                "kind": "straight",
+                "interleave": "sequential",
+                "rest": { "mode": "single" },
+                "termination": { "mode": "count", "n": 1 },
+                "atomic": false,
+                "members": [
+                  {
+                    "type": "setRef",
+                    "label": "hold",
+                    "exercise": "Plank",
+                    "target": { "kind": "duration", "expr": { "type": "number", "value": 60 }, "unit": "s" }
+                  }
+                ]
+              }
+            }
+          ],
+          "groups": [],
+          "body": {
+            "type": "group",
+            "kind": "straight",
+            "interleave": "sequential",
+            "rest": { "mode": "single" },
+            "termination": { "mode": "count", "n": 2 },
+            "atomic": false,
+            "members": [
+              { "type": "ref", "name": "squat" },
+              { "type": "ref", "name": "plank" }
+            ]
+          }
+        }
+      ],
+      "body": {
+        "type": "group",
+        "kind": "straight",
+        "interleave": "sequential",
+        "rest": { "mode": "single" },
+        "termination": { "mode": "count", "n": 1 },
+        "atomic": false,
+        "members": [
+          { "type": "ref", "name": "day1" }
+        ]
+      }
+    }
+  ]
+}

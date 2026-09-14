@@ -4,7 +4,14 @@ User-facing documentation: tutorials and how-tos for people *writing*
 OWL programs, as opposed to [`spec/`](../spec/) (the formal definition,
 for implementers) or [`examples/`](../examples/) (programs to read).
 
-**Not written yet.** Planned outline:
+One implementer-facing reference lives here too, since it's consumption
+docs rather than language-defining prose:
+[`canonical-form-reference.md`](./canonical-form-reference.md) — a
+self-contained wire-format guide to the compiled JSON (`Program`) and
+resolved JSON (`Session`) shapes, written for whoever builds a client
+(e.g. the mobile app) that deserializes them.
+
+The tutorials below are **not written yet.** Planned outline:
 
 - **Getting started** — install/open the playground, write and run your
   first program.

@@ -1,0 +1,120 @@
+{
+  "owlVersion": "0.1.0",
+  "units": "kg",
+  "plates": [25, 20, 15, 10, 5, 2.5, 1.25],
+  "state": [
+    {
+      "path": "tm.curl.weight",
+      "expr": {
+        "type": "mul",
+        "left": { "type": "number", "value": 0.85 },
+        "right": { "type": "catalogField", "catalog": "DumbbellCurl", "field": "e1rm" }
+      },
+      "fallback": { "kind": "numeric", "value": 15 }
+    }
+  ],
+  "blocks": [
+    {
+      "name": "main",
+      "days": [
+        {
+          "name": "day1",
+          "exercises": [
+            {
+              "name": "curls",
+              "catalog": "DumbbellCurl",
+              "sets": [],
+              "groups": [],
+              "body": {
+                "type": "group",
+                "kind": "straight",
+                "interleave": "sequential",
+                "rest": { "mode": "single" },
+                "termination": { "mode": "count", "n": 1 },
+                "atomic": false,
+                "members": [
+                  {
+                    "type": "group",
+                    "kind": "restpause",
+                    "interleave": "sequential",
+                    "rest": { "mode": "single", "duration": { "value": 15, "unit": "s" } },
+                    "termination": { "mode": "count", "n": 3 },
+                    "atomic": true,
+                    "members": [
+                      {
+                        "type": "setRef",
+                        "label": "top",
+                        "exercise": "DumbbellCurl",
+                        "target": { "kind": "reps", "expr": { "type": "number", "value": 8 } },
+                        "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.curl.weight" }, "unit": "kg" }
+                      },
+                      {
+                        "type": "setRef",
+                        "exercise": "DumbbellCurl",
+                        "target": { "kind": "reps", "expr": { "type": "number", "value": 8 } },
+                        "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.curl.weight" }, "unit": "kg" }
+                      },
+                      {
+                        "type": "setRef",
+                        "exercise": "DumbbellCurl",
+                        "target": { "kind": "reps", "expr": { "type": "number", "value": 8 } },
+                        "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.curl.weight" }, "unit": "kg" }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "progress": {
+                "stmts": [
+                  {
+                    "type": "if",
+                    "cond": {
+                      "type": "comparison",
+                      "op": ">=",
+                      "left": { "type": "log", "label": "top", "field": "reps" },
+                      "right": { "type": "number", "value": 10 }
+                    },
+                    "then": [
+                      {
+                        "type": "assign",
+                        "path": "tm.curl.weight",
+                        "expr": {
+                          "type": "add",
+                          "left": { "type": "path", "path": "tm.curl.weight" },
+                          "right": { "type": "number", "value": 2.5 }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "groups": [],
+          "body": {
+            "type": "group",
+            "kind": "straight",
+            "interleave": "sequential",
+            "rest": { "mode": "single" },
+            "termination": { "mode": "count", "n": 1 },
+            "atomic": false,
+            "members": [
+              { "type": "ref", "name": "curls" }
+            ]
+          }
+        }
+      ],
+      "body": {
+        "type": "group",
+        "kind": "straight",
+        "interleave": "sequential",
+        "rest": { "mode": "single" },
+        "termination": { "mode": "count", "n": 1 },
+        "atomic": false,
+        "members": [
+          { "type": "ref", "name": "day1" }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+units = "kg"
+
+block main = {
+    day day1 = {
+        # %1RM load composed inline against the catalog's own e1rm history,
+        # not via a `state` binding.
+        exercise squat = $BarbellBackSquat {
+            set a = 5 @ 0.8 * $BarbellBackSquat.e1rm
+        }
+
+        # A per-set duration target (isometric hold) — no `load` at all.
+        exercise plank = $Plank {
+            set hold = 60s
+        }
+
+        squat;
+        plank;
+    }
+}

@@ -15,8 +15,8 @@
    below is backed by at least one example in that directory; see
    spec/semantics/ for what each production compiles to,
    spec/semantics/groups.md for a short list of constructs that are
-   proposed but not yet attested (dropset, restpause, explicit
-   superset rest-args), and spec/semantics/conditionals.md for the
+   proposed but not yet attested (dropset, explicit superset
+   rest-args), and spec/semantics/conditionals.md for the
    `if`/`then`/`else` family's compiled shape and its own open
    questions (a `setDecl` conditional branch).
 
@@ -90,9 +90,9 @@ dayItem        ::= ( exerciseDecl | condDayItem | stmt ) ';'?
 (* ---- Exercise declarations ---- *)
 
 exerciseDecl   ::= 'exercise' IDENT '=' CATALOG_NAME '{' exerciseItem* '}'
-exerciseItem   ::= ( setDecl | progressDecl | dropsetDecl | condExerciseItem ) ';'?
+exerciseItem   ::= ( setDecl | progressDecl | dropsetDecl | restpauseDecl | condExerciseItem ) ';'?
 
-setDecl        ::= 'set' ( IDENT | '_' ) '=' quantity ( '@' quantity )? dropModifier?
+setDecl        ::= 'set' ( IDENT | '_' ) '=' quantity ( '@' quantity )? ( dropModifier | restPauseModifier )?
 
 (* `progress` is at most one per exercise (spec/semantics/progression.md
    §2), and is itself a small block of code — assignments to `state`
@@ -127,6 +127,21 @@ dropsetDecl    ::= 'dropset' IDENT '=' '{' ( setDecl ';'? )* '}'
    set per factor, each loaded at `factor * <this set>.weight`. Requires
    the set it's attached to have a `@ load`. See groups.md §3.8. *)
 dropModifier   ::= 'drop' '(' NUMBER ( ',' NUMBER )* ')'
+
+(* A named restpause groups a top set with its rest-pause bursts as one
+   atomic unit — the same shape dropsetDecl uses (see
+   spec/semantics/groups.md §3.9), differing only in `rest`'s `single`
+   duration (fixed at 15s in this explicit form) and that each burst
+   holds the annotated set's own target/load fixed, rather than
+   descending. Only `setDecl`s are valid inside — restpause groups don't
+   nest, and don't carry their own `progress` (same rule as dropset). *)
+restpauseDecl  ::= 'restpause' IDENT '=' '{' ( setDecl ';'? )* '}'
+
+(* Sugar: `rest_pause(duration, burstCount)` on a `set` line desugars
+   into an anonymous restpause group — the annotated set plus
+   `burstCount` auto-generated sets holding the same target/load,
+   separated by `duration`'s rest. See groups.md §3.9. *)
+restPauseModifier ::= 'rest_pause' '(' duration ',' NUMBER ')'
 
 
 (* ---- Statements ----

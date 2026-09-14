@@ -1,0 +1,33 @@
+state = {
+    tm.bench.weight = 60
+    tm.row.weight   = 50
+}
+units = "kg"
+
+block main = {
+    day day1 = {
+        exercise bench = $BarbellBenchPress {
+            set a = 8 @ tm.bench.weight
+            set b = 8 @ tm.bench.weight
+            set c = 8 @ tm.bench.weight
+        }
+        exercise row = $BarbellRow {
+            set a = 8 @ tm.row.weight
+            set b = 8 @ tm.row.weight
+            set c = 8 @ tm.row.weight
+        }
+        # 20s rest between bench and row within a round; superset's
+        # default inter-round rest applies between rounds.
+        superset(bench, rest(20s), row);
+
+        exercise lunge = $DumbbellLunge {
+            set a = 12 @ 20kg
+            set b = 12 @ 20kg
+        }
+        exercise situp = $Situp {
+            set a = 15
+            set b = 15
+        }
+        circuit(lunge, situp);
+    }
+}

@@ -1,0 +1,139 @@
+{
+  "owlVersion": "0.1.0",
+  "units": "kg",
+  "state": [],
+  "blocks": [
+    {
+      "name": "main",
+      "days": [
+        {
+          "name": "day1",
+          "groups": [
+            {
+              "name": "partA",
+              "group": {
+                "type": "group",
+                "kind": "for_time",
+                "interleave": "round_robin",
+                "rest": { "mode": "ad_lib" },
+                "termination": { "mode": "for_time" },
+                "atomic": false,
+                "members": [
+                  {
+                    "type": "setRef",
+                    "exercise": "Row",
+                    "target": { "kind": "distance", "expr": { "type": "number", "value": 500 }, "unit": "m" }
+                  },
+                  {
+                    "type": "setRef",
+                    "exercise": "Burpee",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 20 } }
+                  }
+                ]
+              }
+            },
+            {
+              "name": "partB",
+              "group": {
+                "type": "group",
+                "kind": "for_time",
+                "interleave": "sequential",
+                "rest": { "mode": "ad_lib" },
+                "termination": { "mode": "for_time" },
+                "atomic": false,
+                "members": [
+                  {
+                    "type": "group",
+                    "kind": "rounds",
+                    "interleave": "round_robin",
+                    "rest": { "mode": "ad_lib" },
+                    "termination": { "mode": "count", "n": 1 },
+                    "atomic": false,
+                    "members": [
+                      {
+                        "type": "setRef",
+                        "exercise": "KettlebellSwing",
+                        "target": { "kind": "reps", "expr": { "type": "number", "value": 21 } },
+                        "load": { "kind": "weight", "expr": { "type": "number", "value": 24 }, "unit": "kg" }
+                      },
+                      {
+                        "type": "setRef",
+                        "exercise": "PullUp",
+                        "target": { "kind": "reps", "expr": { "type": "number", "value": 21 } }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "group",
+                    "kind": "rounds",
+                    "interleave": "round_robin",
+                    "rest": { "mode": "ad_lib" },
+                    "termination": { "mode": "count", "n": 1 },
+                    "atomic": false,
+                    "members": [
+                      {
+                        "type": "setRef",
+                        "exercise": "KettlebellSwing",
+                        "target": { "kind": "reps", "expr": { "type": "number", "value": 15 } },
+                        "load": { "kind": "weight", "expr": { "type": "number", "value": 24 }, "unit": "kg" }
+                      },
+                      {
+                        "type": "setRef",
+                        "exercise": "PullUp",
+                        "target": { "kind": "reps", "expr": { "type": "number", "value": 15 } }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "group",
+                    "kind": "rounds",
+                    "interleave": "round_robin",
+                    "rest": { "mode": "ad_lib" },
+                    "termination": { "mode": "count", "n": 1 },
+                    "atomic": false,
+                    "members": [
+                      {
+                        "type": "setRef",
+                        "exercise": "KettlebellSwing",
+                        "target": { "kind": "reps", "expr": { "type": "number", "value": 9 } },
+                        "load": { "kind": "weight", "expr": { "type": "number", "value": 24 }, "unit": "kg" }
+                      },
+                      {
+                        "type": "setRef",
+                        "exercise": "PullUp",
+                        "target": { "kind": "reps", "expr": { "type": "number", "value": 9 } }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "body": {
+            "type": "group",
+            "kind": "straight",
+            "interleave": "sequential",
+            "rest": { "mode": "single", "duration": { "value": 3, "unit": "m" } },
+            "termination": { "mode": "count", "n": 2 },
+            "atomic": false,
+            "members": [
+              { "type": "ref", "name": "partA" },
+              { "type": "ref", "name": "partB" }
+            ]
+          }
+        }
+      ],
+      "body": {
+        "type": "group",
+        "kind": "straight",
+        "interleave": "sequential",
+        "rest": { "mode": "single" },
+        "termination": { "mode": "count", "n": 1 },
+        "atomic": false,
+        "members": [
+          { "type": "ref", "name": "day1" }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "name": "day1",
+  "exercises": [
+    {
+      "name": "squat",
+      "catalog": "BarbellBackSquat",
+      "sets": [
+        {
+          "type": "setRef",
+          "label": "a",
+          "exercise": "BarbellBackSquat",
+          "target": { "kind": "reps", "value": 5 },
+          "load": { "kind": "weight", "value": 112, "unit": "kg" }
+        }
+      ],
+      "groups": [],
+      "body": {
+        "type": "group",
+        "kind": "straight",
+        "interleave": "sequential",
+        "rest": { "mode": "single" },
+        "termination": { "mode": "count", "n": 1 },
+        "atomic": false,
+        "members": [
+          {
+            "type": "setRef",
+            "label": "a",
+            "exercise": "BarbellBackSquat",
+            "target": { "kind": "reps", "value": 5 },
+            "load": { "kind": "weight", "value": 112, "unit": "kg" }
+          }
+        ]
+      }
+    },
+    {
+      "name": "plank",
+      "catalog": "Plank",
+      "sets": [
+        {
+          "type": "setRef",
+          "label": "hold",
+          "exercise": "Plank",
+          "target": { "kind": "duration", "value": 60, "unit": "s" }
+        }
+      ],
+      "groups": [],
+      "body": {
+        "type": "group",
+        "kind": "straight",
+        "interleave": "sequential",
+        "rest": { "mode": "single" },
+        "termination": { "mode": "count", "n": 1 },
+        "atomic": false,
+        "members": [
+          {
+            "type": "setRef",
+            "label": "hold",
+            "exercise": "Plank",
+            "target": { "kind": "duration", "value": 60, "unit": "s" }
+          }
+        ]
+      }
+    }
+  ],
+  "groups": [],
+  "body": {
+    "type": "group",
+    "kind": "straight",
+    "interleave": "sequential",
+    "rest": { "mode": "single" },
+    "termination": { "mode": "count", "n": 2 },
+    "atomic": false,
+    "members": [
+      {
+        "type": "group",
+        "kind": "straight",
+        "interleave": "sequential",
+        "rest": { "mode": "single" },
+        "termination": { "mode": "count", "n": 1 },
+        "atomic": false,
+        "members": [
+          {
+            "type": "setRef",
+            "label": "a",
+            "exercise": "BarbellBackSquat",
+            "target": { "kind": "reps", "value": 5 },
+            "load": { "kind": "weight", "value": 112, "unit": "kg" }
+          }
+        ]
+      },
+      {
+        "type": "group",
+        "kind": "straight",
+        "interleave": "sequential",
+        "rest": { "mode": "single" },
+        "termination": { "mode": "count", "n": 1 },
+        "atomic": false,
+        "members": [
+          {
+            "type": "setRef",
+            "label": "hold",
+            "exercise": "Plank",
+            "target": { "kind": "duration", "value": 60, "unit": "s" }
+          }
+        ]
+      }
+    ]
+  }
+}

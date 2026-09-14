@@ -1,0 +1,23 @@
+state = {
+    tm.squat.weight = 100
+    readiness       = 8
+    fatigue         = 3
+}
+units = "kg"
+
+block main = {
+    day day1 = {
+        exercise squat_heavy = $BarbellBackSquat {
+            set a = 5 @ tm.squat.weight
+        }
+        exercise squat_light = $BarbellBackSquat {
+            set a = 5 @ 0.7 * tm.squat.weight
+        }
+
+        # `and` binds tighter than `or`: (weight>=90 and readiness>=7) or fatigue>8
+        if tm.squat.weight >= 90 and readiness >= 7 or fatigue > 8 then
+            squat_heavy;
+        else
+            squat_light;
+    }
+}

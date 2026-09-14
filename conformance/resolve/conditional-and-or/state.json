@@ -1,0 +1,8 @@
+{
+  "bindings": [
+    { "path": "tm.squat.weight", "value": 80 },
+    { "path": "readiness", "value": 5 },
+    { "path": "fatigue", "value": 9 }
+  ],
+  "catalogFields": []
+}

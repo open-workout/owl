@@ -1,0 +1,270 @@
+{
+  "owlVersion": "0.1.0",
+  "units": "kg",
+  "state": [
+    { "path": "tm.bench.weight", "expr": { "type": "number", "value": 60 } },
+    { "path": "tm.row.weight", "expr": { "type": "number", "value": 50 } }
+  ],
+  "blocks": [
+    {
+      "name": "main",
+      "days": [
+        {
+          "name": "day1",
+          "exercises": [
+            {
+              "name": "bench",
+              "catalog": "BarbellBenchPress",
+              "sets": [
+                {
+                  "type": "setRef",
+                  "label": "a",
+                  "exercise": "BarbellBenchPress",
+                  "target": { "kind": "reps", "expr": { "type": "number", "value": 8 } },
+                  "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.bench.weight" }, "unit": "kg" }
+                },
+                {
+                  "type": "setRef",
+                  "label": "b",
+                  "exercise": "BarbellBenchPress",
+                  "target": { "kind": "reps", "expr": { "type": "number", "value": 8 } },
+                  "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.bench.weight" }, "unit": "kg" }
+                },
+                {
+                  "type": "setRef",
+                  "label": "c",
+                  "exercise": "BarbellBenchPress",
+                  "target": { "kind": "reps", "expr": { "type": "number", "value": 8 } },
+                  "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.bench.weight" }, "unit": "kg" }
+                }
+              ],
+              "groups": [],
+              "body": {
+                "type": "group",
+                "kind": "straight",
+                "interleave": "sequential",
+                "rest": { "mode": "single" },
+                "termination": { "mode": "count", "n": 3 },
+                "atomic": false,
+                "members": [
+                  {
+                    "type": "setRef",
+                    "label": "a",
+                    "exercise": "BarbellBenchPress",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 8 } },
+                    "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.bench.weight" }, "unit": "kg" }
+                  },
+                  {
+                    "type": "setRef",
+                    "label": "b",
+                    "exercise": "BarbellBenchPress",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 8 } },
+                    "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.bench.weight" }, "unit": "kg" }
+                  },
+                  {
+                    "type": "setRef",
+                    "label": "c",
+                    "exercise": "BarbellBenchPress",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 8 } },
+                    "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.bench.weight" }, "unit": "kg" }
+                  }
+                ]
+              }
+            },
+            {
+              "name": "row",
+              "catalog": "BarbellRow",
+              "sets": [
+                {
+                  "type": "setRef",
+                  "label": "a",
+                  "exercise": "BarbellRow",
+                  "target": { "kind": "reps", "expr": { "type": "number", "value": 8 } },
+                  "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.row.weight" }, "unit": "kg" }
+                },
+                {
+                  "type": "setRef",
+                  "label": "b",
+                  "exercise": "BarbellRow",
+                  "target": { "kind": "reps", "expr": { "type": "number", "value": 8 } },
+                  "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.row.weight" }, "unit": "kg" }
+                },
+                {
+                  "type": "setRef",
+                  "label": "c",
+                  "exercise": "BarbellRow",
+                  "target": { "kind": "reps", "expr": { "type": "number", "value": 8 } },
+                  "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.row.weight" }, "unit": "kg" }
+                }
+              ],
+              "groups": [],
+              "body": {
+                "type": "group",
+                "kind": "straight",
+                "interleave": "sequential",
+                "rest": { "mode": "single" },
+                "termination": { "mode": "count", "n": 3 },
+                "atomic": false,
+                "members": [
+                  {
+                    "type": "setRef",
+                    "label": "a",
+                    "exercise": "BarbellRow",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 8 } },
+                    "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.row.weight" }, "unit": "kg" }
+                  },
+                  {
+                    "type": "setRef",
+                    "label": "b",
+                    "exercise": "BarbellRow",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 8 } },
+                    "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.row.weight" }, "unit": "kg" }
+                  },
+                  {
+                    "type": "setRef",
+                    "label": "c",
+                    "exercise": "BarbellRow",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 8 } },
+                    "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.row.weight" }, "unit": "kg" }
+                  }
+                ]
+              }
+            },
+            {
+              "name": "lunge",
+              "catalog": "DumbbellLunge",
+              "sets": [
+                {
+                  "type": "setRef",
+                  "label": "a",
+                  "exercise": "DumbbellLunge",
+                  "target": { "kind": "reps", "expr": { "type": "number", "value": 12 } },
+                  "load": { "kind": "weight", "expr": { "type": "number", "value": 20 }, "unit": "kg" }
+                },
+                {
+                  "type": "setRef",
+                  "label": "b",
+                  "exercise": "DumbbellLunge",
+                  "target": { "kind": "reps", "expr": { "type": "number", "value": 12 } },
+                  "load": { "kind": "weight", "expr": { "type": "number", "value": 20 }, "unit": "kg" }
+                }
+              ],
+              "groups": [],
+              "body": {
+                "type": "group",
+                "kind": "straight",
+                "interleave": "sequential",
+                "rest": { "mode": "single" },
+                "termination": { "mode": "count", "n": 2 },
+                "atomic": false,
+                "members": [
+                  {
+                    "type": "setRef",
+                    "label": "a",
+                    "exercise": "DumbbellLunge",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 12 } },
+                    "load": { "kind": "weight", "expr": { "type": "number", "value": 20 }, "unit": "kg" }
+                  },
+                  {
+                    "type": "setRef",
+                    "label": "b",
+                    "exercise": "DumbbellLunge",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 12 } },
+                    "load": { "kind": "weight", "expr": { "type": "number", "value": 20 }, "unit": "kg" }
+                  }
+                ]
+              }
+            },
+            {
+              "name": "situp",
+              "catalog": "Situp",
+              "sets": [
+                {
+                  "type": "setRef",
+                  "label": "a",
+                  "exercise": "Situp",
+                  "target": { "kind": "reps", "expr": { "type": "number", "value": 15 } }
+                },
+                {
+                  "type": "setRef",
+                  "label": "b",
+                  "exercise": "Situp",
+                  "target": { "kind": "reps", "expr": { "type": "number", "value": 15 } }
+                }
+              ],
+              "groups": [],
+              "body": {
+                "type": "group",
+                "kind": "straight",
+                "interleave": "sequential",
+                "rest": { "mode": "single" },
+                "termination": { "mode": "count", "n": 2 },
+                "atomic": false,
+                "members": [
+                  {
+                    "type": "setRef",
+                    "label": "a",
+                    "exercise": "Situp",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 15 } }
+                  },
+                  {
+                    "type": "setRef",
+                    "label": "b",
+                    "exercise": "Situp",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 15 } }
+                  }
+                ]
+              }
+            }
+          ],
+          "groups": [],
+          "body": {
+            "type": "group",
+            "kind": "straight",
+            "interleave": "sequential",
+            "rest": { "mode": "single" },
+            "termination": { "mode": "count", "n": 2 },
+            "atomic": false,
+            "members": [
+              {
+                "type": "group",
+                "kind": "superset",
+                "interleave": "round_robin",
+                "rest": { "mode": "two_level", "intra": { "value": 20, "unit": "s" }, "inter": { "value": 90, "unit": "s" } },
+                "termination": { "mode": "count", "n": 3 },
+                "atomic": false,
+                "members": [
+                  { "type": "ref", "name": "bench" },
+                  { "type": "ref", "name": "row" }
+                ]
+              },
+              {
+                "type": "group",
+                "kind": "circuit",
+                "interleave": "round_robin",
+                "rest": { "mode": "two_level", "intra": { "value": 0, "unit": "s" }, "inter": { "value": 90, "unit": "s" } },
+                "termination": { "mode": "count", "n": 2 },
+                "atomic": false,
+                "members": [
+                  { "type": "ref", "name": "lunge" },
+                  { "type": "ref", "name": "situp" }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "body": {
+        "type": "group",
+        "kind": "straight",
+        "interleave": "sequential",
+        "rest": { "mode": "single" },
+        "termination": { "mode": "count", "n": 1 },
+        "atomic": false,
+        "members": [
+          { "type": "ref", "name": "day1" }
+        ]
+      }
+    }
+  ]
+}

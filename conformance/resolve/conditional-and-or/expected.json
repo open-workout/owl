@@ -2,17 +2,18 @@
   "name": "day1",
   "exercises": [
     {
-      "name": "squat",
+      "name": "squat_heavy",
       "catalog": "BarbellBackSquat",
       "sets": [
         {
           "type": "setRef",
-          "label": "top_set",
+          "label": "a",
           "exercise": "BarbellBackSquat",
           "target": { "kind": "reps", "value": 5 },
-          "load": { "kind": "weight", "value": 100, "unit": "kg" }
+          "load": { "kind": "weight", "value": 80, "unit": "kg" }
         }
       ],
+      "groups": [],
       "body": {
         "type": "group",
         "kind": "straight",
@@ -23,45 +24,41 @@
         "members": [
           {
             "type": "setRef",
-            "label": "top_set",
+            "label": "a",
             "exercise": "BarbellBackSquat",
             "target": { "kind": "reps", "value": 5 },
-            "load": { "kind": "weight", "value": 100, "unit": "kg" }
+            "load": { "kind": "weight", "value": 80, "unit": "kg" }
           }
         ]
-      },
-      "progress": {
-        "stmts": [
+      }
+    },
+    {
+      "name": "squat_light",
+      "catalog": "BarbellBackSquat",
+      "sets": [
+        {
+          "type": "setRef",
+          "label": "a",
+          "exercise": "BarbellBackSquat",
+          "target": { "kind": "reps", "value": 5 },
+          "load": { "kind": "weight", "value": 56, "unit": "kg" }
+        }
+      ],
+      "groups": [],
+      "body": {
+        "type": "group",
+        "kind": "straight",
+        "interleave": "sequential",
+        "rest": { "mode": "single" },
+        "termination": { "mode": "count", "n": 1 },
+        "atomic": false,
+        "members": [
           {
-            "type": "if",
-            "cond": {
-              "type": "comparison",
-              "op": ">",
-              "left": { "type": "path", "path": "tm.squat.weight" },
-              "right": { "type": "number", "value": 150 }
-            },
-            "then": [
-              {
-                "type": "assign",
-                "path": "tm.squat.weight",
-                "expr": {
-                  "type": "add",
-                  "left": { "type": "path", "path": "tm.squat.weight" },
-                  "right": { "type": "number", "value": 2.5 }
-                }
-              }
-            ],
-            "else": [
-              {
-                "type": "assign",
-                "path": "tm.squat.weight",
-                "expr": {
-                  "type": "add",
-                  "left": { "type": "path", "path": "tm.squat.weight" },
-                  "right": { "type": "number", "value": 5 }
-                }
-              }
-            ]
+            "type": "setRef",
+            "label": "a",
+            "exercise": "BarbellBackSquat",
+            "target": { "kind": "reps", "value": 5 },
+            "load": { "kind": "weight", "value": 56, "unit": "kg" }
           }
         ]
       }
@@ -86,10 +83,10 @@
         "members": [
           {
             "type": "setRef",
-            "label": "top_set",
+            "label": "a",
             "exercise": "BarbellBackSquat",
             "target": { "kind": "reps", "value": 5 },
-            "load": { "kind": "weight", "value": 100, "unit": "kg" }
+            "load": { "kind": "weight", "value": 80, "unit": "kg" }
           }
         ]
       }

@@ -1,0 +1,150 @@
+{
+  "owlVersion": "0.1.0",
+  "units": "kg",
+  "state": [
+    { "path": "tm.squat.weight", "expr": { "type": "number", "value": 100 } },
+    { "path": "readiness", "expr": { "type": "number", "value": 8 } },
+    { "path": "fatigue", "expr": { "type": "number", "value": 3 } }
+  ],
+  "blocks": [
+    {
+      "name": "main",
+      "days": [
+        {
+          "name": "day1",
+          "exercises": [
+            {
+              "name": "squat_heavy",
+              "catalog": "BarbellBackSquat",
+              "sets": [
+                {
+                  "type": "setRef",
+                  "label": "a",
+                  "exercise": "BarbellBackSquat",
+                  "target": { "kind": "reps", "expr": { "type": "number", "value": 5 } },
+                  "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.squat.weight" }, "unit": "kg" }
+                }
+              ],
+              "groups": [],
+              "body": {
+                "type": "group",
+                "kind": "straight",
+                "interleave": "sequential",
+                "rest": { "mode": "single" },
+                "termination": { "mode": "count", "n": 1 },
+                "atomic": false,
+                "members": [
+                  {
+                    "type": "setRef",
+                    "label": "a",
+                    "exercise": "BarbellBackSquat",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 5 } },
+                    "load": { "kind": "weight", "expr": { "type": "path", "path": "tm.squat.weight" }, "unit": "kg" }
+                  }
+                ]
+              }
+            },
+            {
+              "name": "squat_light",
+              "catalog": "BarbellBackSquat",
+              "sets": [
+                {
+                  "type": "setRef",
+                  "label": "a",
+                  "exercise": "BarbellBackSquat",
+                  "target": { "kind": "reps", "expr": { "type": "number", "value": 5 } },
+                  "load": {
+                    "kind": "weight",
+                    "expr": {
+                      "type": "mul",
+                      "left": { "type": "number", "value": 0.7 },
+                      "right": { "type": "path", "path": "tm.squat.weight" }
+                    },
+                    "unit": "kg"
+                  }
+                }
+              ],
+              "groups": [],
+              "body": {
+                "type": "group",
+                "kind": "straight",
+                "interleave": "sequential",
+                "rest": { "mode": "single" },
+                "termination": { "mode": "count", "n": 1 },
+                "atomic": false,
+                "members": [
+                  {
+                    "type": "setRef",
+                    "label": "a",
+                    "exercise": "BarbellBackSquat",
+                    "target": { "kind": "reps", "expr": { "type": "number", "value": 5 } },
+                    "load": {
+                      "kind": "weight",
+                      "expr": {
+                        "type": "mul",
+                        "left": { "type": "number", "value": 0.7 },
+                        "right": { "type": "path", "path": "tm.squat.weight" }
+                      },
+                      "unit": "kg"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "groups": [],
+          "body": {
+            "type": "group",
+            "kind": "straight",
+            "interleave": "sequential",
+            "rest": { "mode": "single" },
+            "termination": { "mode": "count", "n": 1 },
+            "atomic": false,
+            "members": [
+              {
+                "type": "conditional",
+                "cond": {
+                  "type": "or",
+                  "left": {
+                    "type": "and",
+                    "left": {
+                      "type": "comparison",
+                      "op": ">=",
+                      "left": { "type": "path", "path": "tm.squat.weight" },
+                      "right": { "type": "number", "value": 90 }
+                    },
+                    "right": {
+                      "type": "comparison",
+                      "op": ">=",
+                      "left": { "type": "path", "path": "readiness" },
+                      "right": { "type": "number", "value": 7 }
+                    }
+                  },
+                  "right": {
+                    "type": "comparison",
+                    "op": ">",
+                    "left": { "type": "path", "path": "fatigue" },
+                    "right": { "type": "number", "value": 8 }
+                  }
+                },
+                "then": { "type": "ref", "name": "squat_heavy" },
+                "else": { "type": "ref", "name": "squat_light" }
+              }
+            ]
+          }
+        }
+      ],
+      "body": {
+        "type": "group",
+        "kind": "straight",
+        "interleave": "sequential",
+        "rest": { "mode": "single" },
+        "termination": { "mode": "count", "n": 1 },
+        "atomic": false,
+        "members": [
+          { "type": "ref", "name": "day1" }
+        ]
+      }
+    }
+  ]
+}

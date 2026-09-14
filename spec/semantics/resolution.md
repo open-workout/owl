@@ -74,10 +74,16 @@ except:
   reps" — see `progression.md`'s use of the rep range at log time);
 - every `Ref` member has been **inlined**: replaced by the actual
   (recursively resolved) declaration it names — an `ExerciseDecl`'s `body`,
-  a `NamedGroup`'s `group`, another `Day`'s `body`, etc. A `Session` is
-  meant to be handed straight to the app for execution, so it carries no
-  further name lookups — `superset(bench, row)`'s `Ref(bench)`/`Ref(row)`
-  become the fully resolved sets themselves;
+  a `NamedGroup`'s `group`, another `Day`'s `body`, etc. The replacement is
+  the whole `Group` value, nested at that position, not spliced flat into
+  the parent's own `members` list — a referenced declaration's own
+  `kind`/`rest`/`termination` (e.g. how many sets it prescribes) has to
+  stay visible to the app, the same way it would if two different parents
+  referenced the same declaration with different surrounding context. A
+  `Session` is meant to be handed straight to the app for execution, so it
+  carries no further name lookups — `superset(bench, row)`'s
+  `Ref(bench)`/`Ref(row)` become bench's and row's own resolved `body`
+  groups;
 - an `ExerciseDecl`'s `progress` field, if present, survives verbatim —
   see the note above.
 
