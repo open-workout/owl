@@ -2,11 +2,16 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useReducer,
+  useRef,
   type ReactNode,
 } from "react";
 import type { FileKind, Pane, Tab, WorkspaceFile } from "../types";
 import { defaultContentForKind } from "../utils/fileTypes";
+import { loadWorkspace, saveWorkspace } from "./persistence";
+
+const PERSIST_DEBOUNCE_MS = 250;
 
 const MAX_PANES = 3;
 export const MIN_PANE_SIZE = 15;
@@ -32,6 +37,8 @@ interface WorkspaceState {
 }
 
 function initialState(): WorkspaceState {
+  const persisted = loadWorkspace();
+  if (persisted) return persisted;
   const pane = makePane(100);
   return { files: [], panes: [pane], focusedPaneId: pane.id };
 }
@@ -201,6 +208,22 @@ const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
+
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  useEffect(() => {
+    const timeout = setTimeout(() => saveWorkspace(state), PERSIST_DEBOUNCE_MS);
+    return () => clearTimeout(timeout);
+  }, [state]);
+
+  useEffect(() => {
+    function flush() {
+      saveWorkspace(stateRef.current);
+    }
+    window.addEventListener("beforeunload", flush);
+    return () => window.removeEventListener("beforeunload", flush);
+  }, []);
 
   const createFile = useCallback(
     (name: string, kind: FileKind) => dispatch({ type: "CREATE_FILE", name, kind }),

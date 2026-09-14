@@ -18,9 +18,16 @@ tabbed editing, and up to three side-by-side panes. React + TypeScript
   each pane's tab bar). Any file can be opened independently in any
   pane.
 - **Editing** — plain monospace `<textarea>` per file, held in React
-  state (`src/state/WorkspaceContext.tsx`). **Nothing persists**: a
-  reload loses all files. That's a deliberate v1 simplification, not
-  an oversight.
+  state (`src/state/WorkspaceContext.tsx`) and syntax-highlighted for
+  `.owl`/`.json` (see `src/utils/highlight.ts`).
+- **Persistence** — the whole workspace (files, open tabs, split
+  layout, pane widths) is saved to the browser's `localStorage`
+  (`src/state/persistence.ts`) on every change and restored on load, so
+  closing and reopening the tab picks up where you left off. This is
+  per-browser only — nothing is synced to a server or another device,
+  and clearing site data wipes it. Stored data is versioned and
+  validated on load; anything that doesn't parse or doesn't match the
+  current shape is discarded rather than crashing the app.
 
 **No compiler is wired in.** `.json` files are just files a user
 pastes or types into — there is no "Compile" action turning an `.owl`
@@ -54,10 +61,12 @@ Neither has any backend, marketplace, or QR logic behind it today.
   `src/state/WorkspaceContext.tsx`) is a plain in-memory model, so
   seeding it from fetched files instead of starting empty is a small
   extension, not a redesign.
-- **A real code editor.** The `.owl`/`.json` textarea has no syntax
-  highlighting. CodeMirror or Monaco are the natural upgrades when
+- **A real code editor.** CodeMirror or Monaco are the natural upgrades
+  over the current hand-rolled highlighted-`<textarea>` overlay, when
   that's worth the dependency weight.
-- **Persistence.** Currently none — no `localStorage`, no backend save.
+- **Cross-device / account-backed persistence.** Today's `localStorage`
+  save is per-browser only; syncing a project across devices needs a
+  backend, which is really the same future work as Publish.
 
 ## Running locally
 

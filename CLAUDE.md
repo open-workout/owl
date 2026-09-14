@@ -70,11 +70,13 @@ need one, and it keeps the toolchain to just Go.
 
 A React + TypeScript + Vite browser app: file tree, tabs (opening a
 `.md` file shows two tabs — source and rendered preview), and up to
-three split panes. All state is in-memory (React), nothing persists
-across reloads, and **no compiler is wired in** — `.json` files are
-just files a user creates, not the output of compiling an `.owl` file.
-A new project's file tree starts empty; there is deliberately no
-seeding from this repo's `examples/`.
+three resizable split panes. State lives in React and is mirrored to
+the browser's `localStorage`, so a project survives closing and
+reopening the tab — but it's per-browser only, nothing syncs across
+devices yet. **No compiler is wired in** — `.json` files are just
+files a user creates, not the output of compiling an `.owl` file. A
+new project's file tree starts empty; there is deliberately no seeding
+from this repo's `examples/`.
 
 The top bar has two intentionally non-functional stubs — "Publish"
 (future: push the project to a not-yet-built marketplace) and "Send to
